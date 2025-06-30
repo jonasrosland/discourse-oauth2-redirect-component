@@ -1,0 +1,12 @@
+whitelisted_domains:
+  default: thecosmoslabs.cloudflareaccess.com|vastdata.thecosmoslabs.com
+  type: list
+  description: "List of allowed redirect domains."
+redirect_delay:
+  default: 1000
+  type: integer
+  description: "Delay in milliseconds before redirect (default: 1000)"
+debug_mode:
+  default: false
+  type: bool
+  description: "Enable debug logging in browser console" 
