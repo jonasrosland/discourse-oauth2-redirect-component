@@ -189,6 +189,8 @@ export default {
       // Handle redirect logic when user is logged in
       function handleRedirectIfLoggedIn() {
         debugLog('Checking for redirect - currentUser:', window.currentUser);
+        debugLog('Current URL:', window.location.href);
+        debugLog('Stored redirect URL:', localStorage.getItem('oauth2_redirect_url'));
         
         if (window.currentUser && window.currentUser.id) {
           const storedRedirect = localStorage.getItem('oauth2_redirect_url');
@@ -199,6 +201,29 @@ export default {
             return true;
           }
         }
+        
+        // Additional checks for login completion
+        const loginIndicators = [
+          document.querySelector('.current-user'),
+          document.querySelector('[data-current-user]'),
+          document.querySelector('.user-menu'),
+          document.querySelector('.header-dropdown-toggle'),
+          window.location.pathname.includes('/u/'),
+          window.location.pathname.includes('/users/')
+        ];
+        
+        const hasLoginIndicator = loginIndicators.some(indicator => indicator !== null);
+        debugLog('Login indicators found:', hasLoginIndicator);
+        
+        if (hasLoginIndicator) {
+          const storedRedirect = localStorage.getItem('oauth2_redirect_url');
+          if (storedRedirect && isValidRedirectUrl(storedRedirect)) {
+            debugLog('Login indicator detected, processing redirect');
+            performRedirect(storedRedirect);
+            return true;
+          }
+        }
+        
         return false;
       }
 
@@ -226,6 +251,22 @@ export default {
 
       // Also check on initial load
       handleRedirectIfLoggedIn();
+
+      // Periodic check for user login (in case user object becomes available later)
+      let checkCount = 0;
+      const maxChecks = 30; // Check for up to 30 seconds
+      const checkInterval = setInterval(() => {
+        checkCount++;
+        debugLog(`Periodic check ${checkCount}/${maxChecks} for user login...`);
+        
+        if (handleRedirectIfLoggedIn()) {
+          clearInterval(checkInterval);
+          debugLog('Redirect completed, stopping periodic checks');
+        } else if (checkCount >= maxChecks) {
+          clearInterval(checkInterval);
+          debugLog('Max checks reached, stopping periodic checks');
+        }
+      }, 1000);
     });
   }
 }; 
