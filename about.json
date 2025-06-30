@@ -9,6 +9,6 @@
   "about_url": "https://github.com/your-repo/oauth2-redirect-theme-component",
   "component": true,
   "assets": {
-    "oauth2-redirect": "javascripts/oauth2-redirect.js"
+    "oauth2-redirect": "javascripts/discourse/initializers/oauth2-redirect.js"
   }
 } 
