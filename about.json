@@ -1,9 +1,9 @@
 {
   "name": "OAuth2 Redirect Handler",
   "about": "Handles redirects after OAuth2 registration for Auth0 integration with configurable admin settings.",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "authors": "Your Name",
-  "theme_version": 2,
+  "theme_version": 3,
   "minimum_discourse_version": "2.7.0",
   "license_url": "https://github.com/your-repo/oauth2-redirect-theme-component/blob/main/LICENSE",
   "about_url": "https://github.com/your-repo/oauth2-redirect-theme-component",
