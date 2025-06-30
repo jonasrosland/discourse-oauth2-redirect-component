@@ -19,7 +19,8 @@ export default {
         // Fallback to default domains
         return [
           'thecosmoslabs.cloudflareaccess.com',
-          'vastdata.thecosmoslabs.com'
+          'vastdata.thecosmoslabs.com',
+          'vastdatacustomers.mindtickle.com'
         ];
       }
 
@@ -67,6 +68,44 @@ export default {
           const value = urlParams.get(param);
           if (value && isValidRedirectUrl(decodeURIComponent(value))) {
             return decodeURIComponent(value);
+          }
+        }
+
+        // Handle OAuth2 state parameter - decode it to extract redirect URI
+        const stateParam = urlParams.get('state');
+        if (stateParam) {
+          try {
+            // The state parameter is base64 encoded and contains the redirect URI
+            // Try to decode it and extract the redirect URI
+            const decodedState = atob(stateParam);
+            debugLog('Decoded state parameter: ' + decodedState);
+            
+            // Look for redirect URI patterns in the decoded state
+            const redirectPatterns = [
+              /loginredirecturi=([^&]+)/,
+              /redirect_uri=([^&]+)/,
+              /return_to=([^&]+)/,
+              /origin=([^&]+)/
+            ];
+            
+            for (const pattern of redirectPatterns) {
+              const match = decodedState.match(pattern);
+              if (match && match[1]) {
+                const decodedRedirect = decodeURIComponent(match[1]);
+                if (isValidRedirectUrl(decodedRedirect)) {
+                  debugLog('Found redirect URI in state: ' + decodedRedirect);
+                  return decodedRedirect;
+                }
+              }
+            }
+            
+            // If no pattern matches, check if the entire decoded state is a valid URL
+            if (isValidRedirectUrl(decodedState)) {
+              debugLog('Decoded state is valid redirect URL: ' + decodedState);
+              return decodedState;
+            }
+          } catch (e) {
+            debugLog('Failed to decode state parameter: ' + e.message);
           }
         }
 
