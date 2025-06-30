@@ -1,3 +1,4 @@
+console.log("OAuth2 Redirect Handler JS loaded!");
 // OAuth2 Redirect Handler Theme Component
 // This component handles redirects after OAuth2 registration for Auth0 integration
 
