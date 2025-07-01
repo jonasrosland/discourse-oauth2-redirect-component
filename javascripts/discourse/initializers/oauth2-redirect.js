@@ -75,27 +75,9 @@ export default {
         // PRIORITY 1: Check for original_redirect URL parameter (primary method from Action)
         const urlParams = new URLSearchParams(window.location.search);
         const originalRedirectParam = urlParams.get('original_redirect');
-        const redirectCount = parseInt(urlParams.get('redirect_count') || '0');
         
         if (originalRedirectParam && isAllowedDomain(originalRedirectParam)) {
           console.log(`OAuth2 Redirect Handler: Found original_redirect parameter: ${originalRedirectParam}`);
-          console.log(`OAuth2 Redirect Handler: Redirect count: ${redirectCount}`);
-          
-          // Check if we're in a redirect loop
-          if (redirectCount >= 3) {
-            console.log(`OAuth2 Redirect Handler: Redirect loop detected (${redirectCount} attempts) - breaking loop`);
-            console.log(`OAuth2 Redirect Handler: Redirecting to original site: ${originalRedirectParam}`);
-            
-            // Clear the parameters from URL
-            const newUrl = new URL(window.location.href);
-            newUrl.searchParams.delete('original_redirect');
-            newUrl.searchParams.delete('redirect_count');
-            window.history.replaceState({}, '', newUrl.toString());
-            
-            // Redirect to the original site
-            window.location.href = originalRedirectParam;
-            return;
-          }
           
           // Clear the parameter from URL to prevent loops
           const newUrl = new URL(window.location.href);
@@ -200,13 +182,9 @@ export default {
                          urlParams.get('return_to') ||
                          urlParams.get('returnTo');
       
-      const redirectCount = parseInt(urlParams.get('redirect_count') || '0');
-      
       if (originalUrl && isAllowedDomain(originalUrl)) {
         console.log(`OAuth2 Redirect Handler: Storing original redirect URL: ${originalUrl}`);
-        console.log(`OAuth2 Redirect Handler: Redirect count: ${redirectCount}`);
         localStorage.setItem('auth0_original_redirect_url', originalUrl);
-        localStorage.setItem('auth0_redirect_count', redirectCount.toString());
       }
 
       console.log('OAuth2 Redirect Handler: Initialization complete');
