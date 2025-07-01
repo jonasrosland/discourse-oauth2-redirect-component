@@ -20,7 +20,9 @@ export default {
         return [
           'thecosmoslabs.cloudflareaccess.com',
           'vastdata.thecosmoslabs.com',
-          'vastdatacustomers.mindtickle.com'
+          'vastdatacustomers.mindtickle.com',
+          'vastdata.mindtickle.com',
+          'mindtickle.com'
         ];
       }
 
@@ -62,7 +64,7 @@ export default {
       function getRedirectUrl() {
         // Check URL parameters first
         const urlParams = new URLSearchParams(window.location.search);
-        const redirectParams = ['origin', 'oauth2_redirect', 'return_to'];
+        const redirectParams = ['origin', 'oauth2_redirect', 'return_to', 'saml_redirect'];
         
         for (const param of redirectParams) {
           const value = urlParams.get(param);
@@ -96,6 +98,16 @@ export default {
                   debugLog('Found redirect URI in state: ' + decodedRedirect);
                   return decodedRedirect;
                 }
+              }
+            }
+            
+            // Look for URL patterns in the decoded state (for JWT-like tokens)
+            const urlMatch = decodedState.match(/https?:\/\/[^\s"']+/);
+            if (urlMatch && !urlMatch[0].includes('community.vastdata.com')) {
+              const foundUrl = urlMatch[0];
+              if (isValidRedirectUrl(foundUrl)) {
+                debugLog('Found URL in decoded state: ' + foundUrl);
+                return foundUrl;
               }
             }
             
@@ -186,19 +198,65 @@ export default {
         }, getRedirectDelay());
       }
 
+      // Check if we're on a registration page
+      function isOnRegistrationPage() {
+        const currentUrl = window.location.href;
+        const registrationIndicators = [
+          '/signup',
+          '/register',
+          '/welcome',
+          '/onboarding',
+          '/complete',
+          '?signup=1',
+          '?registration=1'
+        ];
+        
+        return registrationIndicators.some(indicator => currentUrl.includes(indicator));
+      }
+
+      // Check if user has completed registration
+      function checkUserRegistrationStatus() {
+        // Check if user is logged in and has a profile
+        if (window.currentUser && window.currentUser.id) {
+          debugLog('User is logged in, checking registration status');
+          debugLog('User object: ' + JSON.stringify(window.currentUser, null, 2));
+          
+          // Check if user has a username (indicates completed registration)
+          if (window.currentUser.username) {
+            debugLog('User has username, registration appears complete');
+            return true;
+          } else {
+            debugLog('User logged in but no username - registration may be incomplete');
+            return false;
+          }
+        } else {
+          debugLog('No current user found');
+        }
+        return false;
+      }
+
       // Handle redirect logic when user is logged in
       function handleRedirectIfLoggedIn() {
         debugLog('Checking for redirect - currentUser:', window.currentUser);
         debugLog('Current URL:', window.location.href);
         debugLog('Stored redirect URL:', localStorage.getItem('oauth2_redirect_url'));
         
-        if (window.currentUser && window.currentUser.id) {
-          const storedRedirect = localStorage.getItem('oauth2_redirect_url');
+        const storedRedirect = localStorage.getItem('oauth2_redirect_url');
+        
+        if (storedRedirect && isValidRedirectUrl(storedRedirect)) {
+          // Check if we're on a registration page - if so, wait
+          if (isOnRegistrationPage()) {
+            debugLog('On registration page, waiting for completion');
+            return false;
+          }
           
-          if (storedRedirect && isValidRedirectUrl(storedRedirect)) {
-            debugLog('User logged in, processing redirect');
+          if (checkUserRegistrationStatus()) {
+            debugLog('User registration complete, processing redirect');
             performRedirect(storedRedirect);
             return true;
+          } else {
+            debugLog('User not fully registered yet, waiting...');
+            return false;
           }
         }
         
@@ -216,7 +274,6 @@ export default {
         debugLog('Login indicators found:', hasLoginIndicator);
         
         if (hasLoginIndicator) {
-          const storedRedirect = localStorage.getItem('oauth2_redirect_url');
           if (storedRedirect && isValidRedirectUrl(storedRedirect)) {
             debugLog('Login indicator detected, processing redirect');
             performRedirect(storedRedirect);
@@ -267,6 +324,23 @@ export default {
           debugLog('Max checks reached, stopping periodic checks');
         }
       }, 1000);
+
+      // Additional check for user profile completion
+      // This handles cases where the user completes registration but doesn't navigate
+      let profileCheckInterval = setInterval(() => {
+        if (checkUserRegistrationStatus()) {
+          debugLog('Profile check: User registration appears complete');
+          if (handleRedirectIfLoggedIn()) {
+            clearInterval(profileCheckInterval);
+          }
+        }
+      }, 3000); // Check every 3 seconds
+
+      // Clear interval after 5 minutes to prevent memory leaks
+      setTimeout(() => {
+        clearInterval(profileCheckInterval);
+        debugLog('Profile check interval cleared');
+      }, 300000);
     });
   }
 }; 
