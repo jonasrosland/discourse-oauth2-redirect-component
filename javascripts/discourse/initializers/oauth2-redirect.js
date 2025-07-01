@@ -66,12 +66,12 @@ export default {
           return false;
         }
         
-        // Check if user has been active for at least 10 minutes (much longer to ensure registration completion)
+        // Check if user has been active for at least 15 minutes (much longer to ensure registration completion)
         const userCreatedTime = new Date(currentUser.created_at).getTime();
         const currentTime = new Date().getTime();
         const timeSinceCreation = currentTime - userCreatedTime;
         
-        if (timeSinceCreation < 600000) { // 10 minutes
+        if (timeSinceCreation < 900000) { // 15 minutes
           console.log(`Community Signup Redirect Handler: User created recently (${timeSinceCreation}ms ago) - waiting for registration completion`);
           return false;
         }
@@ -82,6 +82,20 @@ export default {
           return false;
         }
         
+        // Additional check: user should not be on any signup/registration related pages
+        const currentPath = window.location.pathname;
+        if (currentPath.includes('/signup') || currentPath.includes('/register') || currentPath.includes('/create-account')) {
+          console.log('OAuth2 Redirect Handler: User is still on signup/registration page - waiting for completion');
+          return false;
+        }
+        
+        // Additional check: look for signup forms or registration elements
+        const signupForms = document.querySelectorAll('.signup-form, .registration-form, .create-account-form, form[action*="signup"], form[action*="register"]');
+        if (signupForms.length > 0) {
+          console.log('OAuth2 Redirect Handler: Signup forms detected - waiting for completion');
+          return false;
+        }
+        
         console.log(`OAuth2 Redirect Handler: User appears to have completed registration (username: ${currentUser.username}, name: ${currentUser.name}, created ${timeSinceCreation}ms ago)`);
         return true;
       }
@@ -89,6 +103,25 @@ export default {
       // Main redirect handler function
       function handleRedirect() {
         console.log('Community Signup Redirect Handler: Checking for redirect conditions...');
+        
+        // PRIORITY 0: Check if we're currently on a signup/registration page - NEVER redirect from these pages
+        const currentPath = window.location.pathname;
+        const currentUrl = window.location.href;
+        
+        if (currentPath.includes('/signup') || currentPath.includes('/register') || currentPath.includes('/create-account')) {
+          console.log('Community Signup Redirect Handler: Currently on signup/registration page - NEVER redirect from here');
+          console.log(`Current path: ${currentPath}`);
+          console.log(`Current URL: ${currentUrl}`);
+          return;
+        }
+        
+        // Check for signup forms or registration elements
+        const signupForms = document.querySelectorAll('.signup-form, .registration-form, .create-account-form, form[action*="signup"], form[action*="register"]');
+        if (signupForms.length > 0) {
+          console.log('Community Signup Redirect Handler: Signup forms detected - NEVER redirect while forms are present');
+          console.log(`Found ${signupForms.length} signup forms`);
+          return;
+        }
         
         // Check if user is logged in
         const currentUser = api.getCurrentUser();
@@ -249,24 +282,24 @@ export default {
       // Run redirect check with much longer delays to allow for registration completion
       api.onPageChange(() => {
         // Much longer delay to ensure user has time to complete registration
-        setTimeout(handleRedirect, 60000); // 1 minute
+        setTimeout(handleRedirect, 180000); // 3 minutes
       });
 
       // Also run on initial load with much longer delay
-      setTimeout(handleRedirect, 120000); // 2 minutes
+      setTimeout(handleRedirect, 300000); // 5 minutes
 
       // Listen for user login events
       api.onAppEvent('user:logged-in', () => {
         console.log('Community Signup Redirect Handler: User logged in event detected');
         // Don't redirect immediately on login - wait for registration completion
-        setTimeout(handleRedirect, 60000); // 1 minute
+        setTimeout(handleRedirect, 180000); // 3 minutes
       });
 
       // Listen for user registration events
       api.onAppEvent('user:registered', () => {
         console.log('Community Signup Redirect Handler: User registered event detected');
         // Wait longer after registration to ensure completion
-        setTimeout(handleRedirect, 120000); // 2 minutes
+        setTimeout(handleRedirect, 300000); // 5 minutes
       });
 
       // Store redirect URL when user is redirected to Discourse
