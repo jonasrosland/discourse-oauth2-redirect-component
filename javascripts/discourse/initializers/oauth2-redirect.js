@@ -66,13 +66,13 @@ export default {
           return false;
         }
         
-        // Check if user has been active for at least 30 seconds (indicates they've had time to complete registration)
+        // Check if user has been active for at least 5 minutes (much longer to ensure registration completion)
         const userCreatedTime = new Date(currentUser.created_at).getTime();
         const currentTime = new Date().getTime();
         const timeSinceCreation = currentTime - userCreatedTime;
         
-        if (timeSinceCreation < 30000) { // 30 seconds
-          console.log(`OAuth2 Redirect Handler: User created recently (${timeSinceCreation}ms ago) - waiting for registration completion`);
+        if (timeSinceCreation < 300000) { // 5 minutes
+          console.log(`Community Signup Redirect Handler: User created recently (${timeSinceCreation}ms ago) - waiting for registration completion`);
           return false;
         }
         
@@ -188,33 +188,36 @@ export default {
         console.log('OAuth2 Redirect Handler: No redirect conditions met');
       }
 
-      // Run redirect check with longer delays to allow for registration completion
+      // Run redirect check with much longer delays to allow for registration completion
       api.onPageChange(() => {
-        // Longer delay to ensure user has time to complete registration
-        setTimeout(handleRedirect, 5000);
+        // Much longer delay to ensure user has time to complete registration
+        setTimeout(handleRedirect, 30000); // 30 seconds
       });
 
-      // Also run on initial load with longer delay
-      setTimeout(handleRedirect, 10000);
+      // Also run on initial load with much longer delay
+      setTimeout(handleRedirect, 60000); // 1 minute
 
       // Listen for user login events
       api.onAppEvent('user:logged-in', () => {
-        console.log('OAuth2 Redirect Handler: User logged in event detected');
+        console.log('Community Signup Redirect Handler: User logged in event detected');
         // Don't redirect immediately on login - wait for registration completion
-        setTimeout(handleRedirect, 10000);
+        setTimeout(handleRedirect, 30000); // 30 seconds
       });
 
       // Listen for user registration events
       api.onAppEvent('user:registered', () => {
-        console.log('OAuth2 Redirect Handler: User registered event detected');
+        console.log('Community Signup Redirect Handler: User registered event detected');
         // Wait longer after registration to ensure completion
-        setTimeout(handleRedirect, 15000);
+        setTimeout(handleRedirect, 60000); // 1 minute
       });
 
       // Store redirect URL when user is redirected to Discourse
       // This is a backup mechanism in case the Auth0 Action doesn't work
       const currentUrl = window.location.href;
       const urlParams = new URLSearchParams(window.location.search);
+      
+      console.log(`Community Signup Redirect Handler: Initial page load - URL: ${currentUrl}`);
+      console.log(`Community Signup Redirect Handler: URL parameters:`, Object.fromEntries(urlParams.entries()));
       
       // Check if this is a signup flow or OAuth callback with redirect information
       // Updated to prioritize return_url parameter (from direct signup) and original_redirect parameter (from Action)
@@ -226,11 +229,11 @@ export default {
                          urlParams.get('returnTo');
       
       if (originalUrl && isAllowedDomain(originalUrl)) {
-        console.log(`OAuth2 Redirect Handler: Storing original redirect URL: ${originalUrl}`);
+        console.log(`Community Signup Redirect Handler: Storing original redirect URL: ${originalUrl}`);
         localStorage.setItem('auth0_original_redirect_url', originalUrl);
       }
 
-      console.log('OAuth2 Redirect Handler: Initialization complete');
+      console.log('Community Signup Redirect Handler: Initialization complete');
     });
   }
 }; 
