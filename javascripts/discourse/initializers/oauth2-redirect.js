@@ -64,7 +64,7 @@ export default {
       function getRedirectUrl() {
         // Check URL parameters first
         const urlParams = new URLSearchParams(window.location.search);
-        const redirectParams = ['origin', 'oauth2_redirect', 'return_to', 'saml_redirect'];
+        const redirectParams = ['origin', 'oauth2_redirect', 'return_to', 'saml_redirect', 'original_url'];
         
         for (const param of redirectParams) {
           const value = urlParams.get(param);
