@@ -95,8 +95,31 @@ export default {
         console.log(`OAuth2 Redirect Handler: User created at: ${currentUser.created_at}`);
         console.log(`OAuth2 Redirect Handler: Current URL: ${window.location.href}`);
 
-        // PRIORITY 1: Check for original_redirect URL parameter (primary method from Action)
+        // PRIORITY 1: Check for return_url parameter (from direct signup flow)
         const urlParams = new URLSearchParams(window.location.search);
+        const returnUrlParam = urlParams.get('return_url');
+        
+        if (returnUrlParam && isAllowedDomain(returnUrlParam)) {
+          console.log(`OAuth2 Redirect Handler: Found return_url parameter: ${returnUrlParam}`);
+          
+          // Only redirect if user has completed registration
+          if (!hasCompletedRegistration(currentUser)) {
+            console.log('OAuth2 Redirect Handler: User has not completed registration yet, waiting...');
+            return;
+          }
+          
+          // Clear the parameter from URL to prevent loops
+          const newUrl = new URL(window.location.href);
+          newUrl.searchParams.delete('return_url');
+          window.history.replaceState({}, '', newUrl.toString());
+          
+          // Redirect to the original site
+          console.log(`OAuth2 Redirect Handler: Redirecting to original site: ${returnUrlParam}`);
+          window.location.href = returnUrlParam;
+          return;
+        }
+
+        // PRIORITY 2: Check for original_redirect URL parameter (legacy method from Action)
         const originalRedirectParam = urlParams.get('original_redirect');
         
         if (originalRedirectParam && isAllowedDomain(originalRedirectParam)) {
@@ -213,9 +236,10 @@ export default {
       const currentUrl = window.location.href;
       const urlParams = new URLSearchParams(window.location.search);
       
-      // Check if this is an OAuth callback with redirect information
-      // Updated to prioritize original_redirect parameter (used by the Action)
-      const originalUrl = urlParams.get('original_redirect') ||
+      // Check if this is a signup flow or OAuth callback with redirect information
+      // Updated to prioritize return_url parameter (from direct signup) and original_redirect parameter (from Action)
+      const originalUrl = urlParams.get('return_url') ||
+                         urlParams.get('original_redirect') ||
                          urlParams.get('original_url') || 
                          urlParams.get('saml_redirect') || 
                          urlParams.get('return_to') ||
