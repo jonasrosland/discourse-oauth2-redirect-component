@@ -49,6 +49,28 @@ export default {
         }
 
         console.log(`OAuth2 Redirect Handler: User logged in: ${currentUser.email}`);
+        console.log(`OAuth2 Redirect Handler: User created at: ${currentUser.created_at}`);
+        console.log(`OAuth2 Redirect Handler: Current URL: ${window.location.href}`);
+
+        // Check if user is on the signup page - if so, don't redirect yet
+        const isOnSignupPage = window.location.pathname.includes('/signup') || 
+                              window.location.pathname.includes('/register') ||
+                              document.querySelector('.signup-form') ||
+                              document.querySelector('.registration-form');
+        
+        if (isOnSignupPage) {
+          console.log('OAuth2 Redirect Handler: User is on signup page, waiting for registration completion');
+          return;
+        }
+
+        // Check if user has a username (indicates completed registration)
+        if (currentUser.username) {
+          console.log(`OAuth2 Redirect Handler: User has username: ${currentUser.username}, registration appears complete`);
+        } else {
+          console.log('OAuth2 Redirect Handler: User logged in but no username - registration may be incomplete');
+          // Don't redirect if user doesn't have a username yet
+          return;
+        }
 
         // Check if this is a registration completion scenario
         // Look for URL parameters that indicate we should redirect back to Auth0
@@ -94,6 +116,7 @@ export default {
         // If user was created in the last 5 minutes, they might have just completed registration
         if (timeSinceRegistration < 5 * 60 * 1000) {
           console.log('OAuth2 Redirect Handler: Recent registration detected, checking for redirect');
+          console.log(`OAuth2 Redirect Handler: Time since registration: ${timeSinceRegistration}ms`);
           
           // Check if we have any stored redirect information
           const fallbackRedirectUrl = 'https://vastdatacustomers.mindtickle.com';
