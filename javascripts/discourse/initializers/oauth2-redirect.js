@@ -7,7 +7,7 @@ export default {
     console.log("OAuth2 Redirect Handler JS loaded!");
     // OAuth2 Redirect Handler Theme Component
     // This component serves as a backup redirect mechanism for Auth0 integration
-    // The primary redirect logic is now handled by the Auth0 Action using redirect_uri encoding
+    // The primary redirect logic is now handled by the Auth0 Action using state parameter encoding
 
     'use strict';
 
@@ -61,9 +61,32 @@ export default {
         }
       }
 
-      // Extract redirect information from encoded redirect parameter
+      // Extract redirect information from state parameter (new approach)
+      function extractStateInfo() {
+        debugLog('Checking for state parameter information...');
+        
+        const urlParams = new URLSearchParams(window.location.search);
+        const state = urlParams.get('state');
+        
+        if (state) {
+          try {
+            const decodedState = JSON.parse(atob(state));
+            debugLog('Found state info: ' + JSON.stringify(decodedState));
+            
+            if (decodedState.original_redirect_url && isValidRedirectUrl(decodedState.original_redirect_url)) {
+              return decodedState;
+            }
+          } catch (e) {
+            debugLog('State parameter is not our encoded format: ' + e.message);
+          }
+        }
+        
+        return null;
+      }
+
+      // Extract redirect information from encoded redirect parameter (fallback)
       function extractRedirectInfo() {
-        debugLog('Checking for encoded redirect information...');
+        debugLog('Checking for encoded redirect information (fallback)...');
         
         const urlParams = new URLSearchParams(window.location.search);
         const encodedRedirect = urlParams.get('encoded_redirect');
@@ -170,7 +193,7 @@ export default {
         }, 3000);
       }
 
-      // Perform the redirect back to Auth0
+      // Perform the redirect back to Auth0 with state parameter
       function performRedirectToAuth0(redirectInfo) {
         debugLog('Theme component redirecting back to Auth0 with info: ' + JSON.stringify(redirectInfo));
         showMessage('Registration complete, redirecting to original site...', 'info');
@@ -178,15 +201,25 @@ export default {
         // Clear the stored redirect URL
         clearRedirectUrl();
         
-        // Create the Auth0 callback URL with the encoded redirect information
+        // Create the Auth0 callback URL with the encoded state information
         const baseRedirectUri = window.location.origin + '/auth/oauth2_basic/callback';
-        const encodedInfo = btoa(JSON.stringify(redirectInfo));
         
         try {
-          const auth0CallbackUrl = new URL(baseRedirectUri);
-          auth0CallbackUrl.searchParams.set('encoded_redirect', encodedInfo);
+          // Create state parameter with the redirect information
+          const stateInfo = {
+            original_redirect_url: redirectInfo.original_redirect_url || redirectInfo,
+            timestamp: Date.now(),
+            nonce: Math.random().toString(36).substring(2, 15),
+            redirect_count: 0, // Reset count for final redirect
+            flow_type: 'discourse_registration_complete'
+          };
           
-          debugLog('Redirecting to Auth0 callback: ' + auth0CallbackUrl.toString());
+          const encodedState = btoa(JSON.stringify(stateInfo));
+          
+          const auth0CallbackUrl = new URL(baseRedirectUri);
+          auth0CallbackUrl.searchParams.set('state', encodedState);
+          
+          debugLog('Redirecting to Auth0 callback with state: ' + auth0CallbackUrl.toString());
           
           // Redirect after the configured delay
           setTimeout(() => {
@@ -196,7 +229,13 @@ export default {
           debugLog('Error creating Auth0 callback URL: ' + e.message);
           // Fallback to simple redirect
           setTimeout(() => {
-            window.location.href = baseRedirectUri + '?encoded_redirect=' + encodeURIComponent(encodedInfo);
+            window.location.href = baseRedirectUri + '?state=' + encodeURIComponent(btoa(JSON.stringify({
+              original_redirect_url: redirectInfo.original_redirect_url || redirectInfo,
+              timestamp: Date.now(),
+              nonce: Math.random().toString(36).substring(2, 15),
+              redirect_count: 0,
+              flow_type: 'discourse_registration_complete'
+            })));
           }, getRedirectDelay());
         }
       }
@@ -221,7 +260,7 @@ export default {
         return false;
       }
 
-      // Handle redirect logic for new redirect URI approach
+      // Handle redirect logic for new state parameter approach
       function handleRedirectIfLoggedIn() {
         debugLog('Theme component checking for redirect...');
         debugLog('Current user:', window.currentUser ? 'Logged in' : 'Not logged in');
@@ -239,10 +278,18 @@ export default {
           return false;
         }
         
-        // Check for encoded redirect information (new approach)
+        // Check for state parameter information (new approach)
+        const stateInfo = extractStateInfo();
+        if (stateInfo) {
+          debugLog('Found state info, redirecting back to Auth0');
+          performRedirectToAuth0(stateInfo);
+          return true;
+        }
+        
+        // Check for encoded redirect information (fallback approach)
         const redirectInfo = extractRedirectInfo();
         if (redirectInfo) {
-          debugLog('Found encoded redirect info, redirecting back to Auth0');
+          debugLog('Found encoded redirect info (fallback), redirecting back to Auth0');
           performRedirectToAuth0(redirectInfo);
           return true;
         }
@@ -274,7 +321,17 @@ export default {
           storeRedirectUrl(redirectUrl);
         }
         
-        // Also check for encoded redirect info
+        // Check for state parameter info (new approach)
+        const stateInfo = extractStateInfo();
+        if (stateInfo) {
+          debugLog('Found state info on page load: ' + JSON.stringify(stateInfo));
+          // Store the original redirect URL for backup
+          if (stateInfo.original_redirect_url) {
+            storeRedirectUrl(stateInfo.original_redirect_url);
+          }
+        }
+        
+        // Also check for encoded redirect info (fallback)
         const redirectInfo = extractRedirectInfo();
         if (redirectInfo) {
           debugLog('Found encoded redirect info on page load: ' + JSON.stringify(redirectInfo));
