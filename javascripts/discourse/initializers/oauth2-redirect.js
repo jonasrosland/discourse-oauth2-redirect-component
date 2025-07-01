@@ -62,7 +62,17 @@ export default {
 
       // Extract redirect URL from various possible sources
       function getRedirectUrl() {
-        // Check URL parameters first
+        // Check if we're in an Auth0 flow with user metadata (primary method)
+        // This would be set by the Auth0 Action and available in the user object
+        if (window.currentUser && window.currentUser.user_metadata && window.currentUser.user_metadata.original_redirect_url) {
+          const auth0RedirectUrl = window.currentUser.user_metadata.original_redirect_url;
+          debugLog('Found redirect URL in Auth0 user metadata: ' + auth0RedirectUrl);
+          if (isValidRedirectUrl(auth0RedirectUrl)) {
+            return auth0RedirectUrl;
+          }
+        }
+        
+        // Check URL parameters first (fallback method)
         const urlParams = new URLSearchParams(window.location.search);
         const redirectParams = ['origin', 'oauth2_redirect', 'return_to', 'saml_redirect', 'original_url'];
         
@@ -156,6 +166,15 @@ export default {
         localStorage.removeItem('oauth2_redirect_url');
       }
 
+      // Clear Auth0 user metadata after successful redirect
+      function clearAuth0UserMetadata() {
+        if (window.currentUser && window.currentUser.user_metadata && window.currentUser.user_metadata.original_redirect_url) {
+          debugLog('Clearing Auth0 user metadata after successful redirect');
+          // Note: This would require an API call to Auth0 to clear the metadata
+          // For now, we'll just log it - the Action should handle cleanup
+        }
+      }
+
       // Show a message to the user
       function showMessage(message, type = 'info') {
         const messageDiv = document.createElement('div');
@@ -240,6 +259,12 @@ export default {
         debugLog('Checking for redirect - currentUser:', window.currentUser);
         debugLog('Current URL:', window.location.href);
         debugLog('Stored redirect URL:', localStorage.getItem('oauth2_redirect_url'));
+        
+        // Check if Auth0 Action has already handled this (user metadata approach)
+        if (window.currentUser && window.currentUser.user_metadata && window.currentUser.user_metadata.original_redirect_url) {
+          debugLog('Auth0 Action has stored redirect URL in user metadata - letting Action handle redirect');
+          return false; // Let the Action handle the redirect
+        }
         
         const storedRedirect = localStorage.getItem('oauth2_redirect_url');
         
