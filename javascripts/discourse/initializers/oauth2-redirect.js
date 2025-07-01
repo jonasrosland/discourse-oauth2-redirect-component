@@ -111,6 +111,8 @@ export default {
           // Clear the parameter from URL to prevent loops
           const newUrl = new URL(window.location.href);
           newUrl.searchParams.delete('return_url');
+          newUrl.searchParams.delete('oauth2_redirect');
+          newUrl.searchParams.delete('origin');
           window.history.replaceState({}, '', newUrl.toString());
           
           // Redirect to the original site
@@ -119,7 +121,57 @@ export default {
           return;
         }
 
-        // PRIORITY 2: Check for original_redirect URL parameter (legacy method from Action)
+        // PRIORITY 2: Check for oauth2_redirect parameter (from direct signup flow)
+        const oauth2RedirectParam = urlParams.get('oauth2_redirect');
+        
+        if (oauth2RedirectParam && isAllowedDomain(oauth2RedirectParam)) {
+          console.log(`Community Signup Redirect Handler: Found oauth2_redirect parameter: ${oauth2RedirectParam}`);
+          
+          // Only redirect if user has completed registration
+          if (!hasCompletedRegistration(currentUser)) {
+            console.log('Community Signup Redirect Handler: User has not completed registration yet, waiting...');
+            return;
+          }
+          
+          // Clear the parameter from URL to prevent loops
+          const newUrl = new URL(window.location.href);
+          newUrl.searchParams.delete('return_url');
+          newUrl.searchParams.delete('oauth2_redirect');
+          newUrl.searchParams.delete('origin');
+          window.history.replaceState({}, '', newUrl.toString());
+          
+          // Redirect to the original site
+          console.log(`Community Signup Redirect Handler: Redirecting to original site: ${oauth2RedirectParam}`);
+          window.location.href = oauth2RedirectParam;
+          return;
+        }
+
+        // PRIORITY 3: Check for origin parameter (from direct signup flow)
+        const originParam = urlParams.get('origin');
+        
+        if (originParam && isAllowedDomain(originParam)) {
+          console.log(`Community Signup Redirect Handler: Found origin parameter: ${originParam}`);
+          
+          // Only redirect if user has completed registration
+          if (!hasCompletedRegistration(currentUser)) {
+            console.log('Community Signup Redirect Handler: User has not completed registration yet, waiting...');
+            return;
+          }
+          
+          // Clear the parameter from URL to prevent loops
+          const newUrl = new URL(window.location.href);
+          newUrl.searchParams.delete('return_url');
+          newUrl.searchParams.delete('oauth2_redirect');
+          newUrl.searchParams.delete('origin');
+          window.history.replaceState({}, '', newUrl.toString());
+          
+          // Redirect to the original site
+          console.log(`Community Signup Redirect Handler: Redirecting to original site: ${originParam}`);
+          window.location.href = originParam;
+          return;
+        }
+
+        // PRIORITY 4: Check for original_redirect URL parameter (legacy method from Action)
         const originalRedirectParam = urlParams.get('original_redirect');
         
         if (originalRedirectParam && isAllowedDomain(originalRedirectParam)) {
@@ -143,7 +195,7 @@ export default {
           return;
         }
 
-        // PRIORITY 3: Check if we have a stored redirect URL in localStorage (fallback method)
+        // PRIORITY 5: Check if we have a stored redirect URL in localStorage (fallback method)
         const storedRedirectUrl = localStorage.getItem('auth0_original_redirect_url');
         if (storedRedirectUrl && isAllowedDomain(storedRedirectUrl)) {
           console.log(`OAuth2 Redirect Handler: Found stored redirect URL: ${storedRedirectUrl}`);
@@ -163,7 +215,7 @@ export default {
           return;
         }
 
-        // PRIORITY 4: Fallback redirect for recently registered users
+        // PRIORITY 6: Fallback redirect for recently registered users
         // Only if user has completed registration and we have no other redirect info
         if (hasCompletedRegistration(currentUser)) {
           const userRegistrationTime = currentUser.created_at;
