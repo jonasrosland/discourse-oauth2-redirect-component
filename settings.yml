@@ -1,5 +1,5 @@
 whitelisted_domains:
-  default: thecosmoslabs.cloudflareaccess.com|vastdata.thecosmoslabs.com
+  default: thecosmoslabs.cloudflareaccess.com|vastdata.thecosmoslabs.com|vastdatacustomers.mindtickle.com|vastdata.mindtickle.com
   type: list
   description: "List of allowed redirect domains."
 redirect_delay:
