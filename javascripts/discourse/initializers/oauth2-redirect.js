@@ -7,7 +7,7 @@ export default {
     console.log("OAuth2 Redirect Handler JS loaded!");
     // OAuth2 Redirect Handler Theme Component
     // This component serves as a backup redirect mechanism for Auth0 integration
-    // The primary redirect logic is now handled by the Auth0 Action
+    // The primary redirect logic is now handled by the Auth0 Action using redirect_uri encoding
 
     'use strict';
 
@@ -61,7 +61,30 @@ export default {
         }
       }
 
-      // Extract redirect URL from various possible sources
+      // Extract redirect information from encoded redirect parameter
+      function extractRedirectInfo() {
+        debugLog('Checking for encoded redirect information...');
+        
+        const urlParams = new URLSearchParams(window.location.search);
+        const encodedRedirect = urlParams.get('encoded_redirect');
+        
+        if (encodedRedirect) {
+          try {
+            const decodedInfo = JSON.parse(atob(encodedRedirect));
+            debugLog('Found encoded redirect info: ' + JSON.stringify(decodedInfo));
+            
+            if (decodedInfo.original_redirect_url && isValidRedirectUrl(decodedInfo.original_redirect_url)) {
+              return decodedInfo;
+            }
+          } catch (e) {
+            debugLog('Error decoding redirect info: ' + e.message);
+          }
+        }
+        
+        return null;
+      }
+
+      // Extract redirect URL from various possible sources (fallback)
       function getRedirectUrl() {
         debugLog('Checking for redirect URL from various sources...');
         
@@ -147,18 +170,35 @@ export default {
         }, 3000);
       }
 
-      // Perform the redirect
-      function performRedirect(url) {
-        debugLog('Theme component performing redirect to: ' + url);
-        showMessage('Redirecting to original site...', 'info');
+      // Perform the redirect back to Auth0
+      function performRedirectToAuth0(redirectInfo) {
+        debugLog('Theme component redirecting back to Auth0 with info: ' + JSON.stringify(redirectInfo));
+        showMessage('Registration complete, redirecting to original site...', 'info');
         
         // Clear the stored redirect URL
         clearRedirectUrl();
         
-        // Redirect after the configured delay
-        setTimeout(() => {
-          window.location.href = url;
-        }, getRedirectDelay());
+        // Create the Auth0 callback URL with the encoded redirect information
+        const baseRedirectUri = window.location.origin + '/auth/oauth2_basic/callback';
+        const encodedInfo = btoa(JSON.stringify(redirectInfo));
+        
+        try {
+          const auth0CallbackUrl = new URL(baseRedirectUri);
+          auth0CallbackUrl.searchParams.set('encoded_redirect', encodedInfo);
+          
+          debugLog('Redirecting to Auth0 callback: ' + auth0CallbackUrl.toString());
+          
+          // Redirect after the configured delay
+          setTimeout(() => {
+            window.location.href = auth0CallbackUrl.toString();
+          }, getRedirectDelay());
+        } catch (e) {
+          debugLog('Error creating Auth0 callback URL: ' + e.message);
+          // Fallback to simple redirect
+          setTimeout(() => {
+            window.location.href = baseRedirectUri + '?encoded_redirect=' + encodeURIComponent(encodedInfo);
+          }, getRedirectDelay());
+        }
       }
 
       // Check if user has completed registration
@@ -181,7 +221,7 @@ export default {
         return false;
       }
 
-      // Handle redirect logic - simplified for new Action approach
+      // Handle redirect logic for new redirect URI approach
       function handleRedirectIfLoggedIn() {
         debugLog('Theme component checking for redirect...');
         debugLog('Current user:', window.currentUser ? 'Logged in' : 'Not logged in');
@@ -199,11 +239,22 @@ export default {
           return false;
         }
         
-        // Look for stored redirect URL as backup
+        // Check for encoded redirect information (new approach)
+        const redirectInfo = extractRedirectInfo();
+        if (redirectInfo) {
+          debugLog('Found encoded redirect info, redirecting back to Auth0');
+          performRedirectToAuth0(redirectInfo);
+          return true;
+        }
+        
+        // Look for stored redirect URL as backup (old approach)
         const storedRedirect = localStorage.getItem('oauth2_redirect_url');
         if (storedRedirect && isValidRedirectUrl(storedRedirect)) {
           debugLog('Found stored redirect URL, performing backup redirect');
-          performRedirect(storedRedirect);
+          showMessage('Redirecting to original site...', 'info');
+          setTimeout(() => {
+            window.location.href = storedRedirect;
+          }, getRedirectDelay());
           return true;
         }
         
@@ -221,6 +272,16 @@ export default {
         if (redirectUrl) {
           debugLog('Found redirect URL: ' + redirectUrl);
           storeRedirectUrl(redirectUrl);
+        }
+        
+        // Also check for encoded redirect info
+        const redirectInfo = extractRedirectInfo();
+        if (redirectInfo) {
+          debugLog('Found encoded redirect info on page load: ' + JSON.stringify(redirectInfo));
+          // Store the original redirect URL for backup
+          if (redirectInfo.original_redirect_url) {
+            storeRedirectUrl(redirectInfo.original_redirect_url);
+          }
         }
       }
 
