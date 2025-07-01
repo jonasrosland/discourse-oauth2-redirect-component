@@ -92,7 +92,18 @@ export default {
             const decodedState = atob(stateParam);
             debugLog('Decoded state parameter: ' + decodedState);
             
-            // Look for redirect URI patterns in the decoded state
+            // First, try to parse as JSON (new Auth0 Action format)
+            try {
+              const stateData = JSON.parse(decodedState);
+              if (stateData.original_redirect_url && isValidRedirectUrl(stateData.original_redirect_url)) {
+                debugLog('Found redirect URL in JSON state: ' + stateData.original_redirect_url);
+                return stateData.original_redirect_url;
+              }
+            } catch (jsonError) {
+              debugLog('State is not JSON format: ' + jsonError.message);
+            }
+            
+            // Look for redirect URI patterns in the decoded state (legacy format)
             const redirectPatterns = [
               /loginredirecturi=([^&]+)/,
               /redirect_uri=([^&]+)/,
