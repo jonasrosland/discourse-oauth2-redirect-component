@@ -6,7 +6,8 @@ export default {
   initialize() {
     console.log("OAuth2 Redirect Handler JS loaded!");
     // OAuth2 Redirect Handler Theme Component
-    // This component handles redirects after OAuth2 registration for Auth0 integration
+    // This component serves as a backup redirect mechanism for Auth0 integration
+    // The primary redirect logic is now handled by the Auth0 Action
 
     'use strict';
 
@@ -62,6 +63,8 @@ export default {
 
       // Extract redirect URL from various possible sources
       function getRedirectUrl() {
+        debugLog('Checking for redirect URL from various sources...');
+        
         // Check if we're in an Auth0 flow with user metadata (primary method)
         // This would be set by the Auth0 Action and available in the user object
         if (window.currentUser && window.currentUser.user_metadata && window.currentUser.user_metadata.original_redirect_url) {
@@ -72,95 +75,33 @@ export default {
           }
         }
         
-        // Check URL parameters first (fallback method)
+        // Check URL parameters (fallback method)
         const urlParams = new URLSearchParams(window.location.search);
         const redirectParams = ['origin', 'oauth2_redirect', 'return_to', 'saml_redirect', 'original_url'];
         
         for (const param of redirectParams) {
           const value = urlParams.get(param);
-          if (value && isValidRedirectUrl(decodeURIComponent(value))) {
-            return decodeURIComponent(value);
-          }
-        }
-
-        // Handle OAuth2 state parameter - decode it to extract redirect URI
-        const stateParam = urlParams.get('state');
-        if (stateParam) {
-          try {
-            // The state parameter is base64 encoded and contains the redirect URI
-            // Try to decode it and extract the redirect URI
-            const decodedState = atob(stateParam);
-            debugLog('Decoded state parameter: ' + decodedState);
-            
-            // First, try to parse as JSON (new Auth0 Action format)
+          if (value) {
             try {
-              const stateData = JSON.parse(decodedState);
-              if (stateData.original_redirect_url && isValidRedirectUrl(stateData.original_redirect_url)) {
-                debugLog('Found redirect URL in JSON state: ' + stateData.original_redirect_url);
-                return stateData.original_redirect_url;
+              const decodedValue = decodeURIComponent(value);
+              debugLog(`Found URL parameter ${param}: ${decodedValue}`);
+              if (isValidRedirectUrl(decodedValue)) {
+                return decodedValue;
               }
-            } catch (jsonError) {
-              debugLog('State is not JSON format: ' + jsonError.message);
+            } catch (e) {
+              debugLog(`Error decoding parameter ${param}: ${e.message}`);
             }
-            
-            // Look for redirect URI patterns in the decoded state (legacy format)
-            const redirectPatterns = [
-              /loginredirecturi=([^&]+)/,
-              /redirect_uri=([^&]+)/,
-              /return_to=([^&]+)/,
-              /origin=([^&]+)/
-            ];
-            
-            for (const pattern of redirectPatterns) {
-              const match = decodedState.match(pattern);
-              if (match && match[1]) {
-                const decodedRedirect = decodeURIComponent(match[1]);
-                if (isValidRedirectUrl(decodedRedirect)) {
-                  debugLog('Found redirect URI in state: ' + decodedRedirect);
-                  return decodedRedirect;
-                }
-              }
-            }
-            
-            // Look for URL patterns in the decoded state (for JWT-like tokens)
-            const urlMatch = decodedState.match(/https?:\/\/[^\s"']+/);
-            if (urlMatch && !urlMatch[0].includes('community.vastdata.com')) {
-              const foundUrl = urlMatch[0];
-              if (isValidRedirectUrl(foundUrl)) {
-                debugLog('Found URL in decoded state: ' + foundUrl);
-                return foundUrl;
-              }
-            }
-            
-            // If no pattern matches, check if the entire decoded state is a valid URL
-            if (isValidRedirectUrl(decodedState)) {
-              debugLog('Decoded state is valid redirect URL: ' + decodedState);
-              return decodedState;
-            }
-          } catch (e) {
-            debugLog('Failed to decode state parameter: ' + e.message);
           }
         }
 
         // Check localStorage for stored redirect URL
         const storedRedirect = localStorage.getItem('oauth2_redirect_url');
         if (storedRedirect && isValidRedirectUrl(storedRedirect)) {
+          debugLog('Found stored redirect URL: ' + storedRedirect);
           return storedRedirect;
         }
 
-        // Check referrer if it's from an allowed domain
-        if (document.referrer) {
-          try {
-            const referrerUrl = new URL(document.referrer);
-            const allowedDomains = getAllowedDomains();
-            if (allowedDomains.includes(referrerUrl.hostname)) {
-              return document.referrer;
-            }
-          } catch (e) {
-            // Invalid referrer URL, ignore
-          }
-        }
-
+        debugLog('No valid redirect URL found');
         return null;
       }
 
@@ -175,15 +116,7 @@ export default {
       // Clear stored redirect URL
       function clearRedirectUrl() {
         localStorage.removeItem('oauth2_redirect_url');
-      }
-
-      // Clear Auth0 user metadata after successful redirect
-      function clearAuth0UserMetadata() {
-        if (window.currentUser && window.currentUser.user_metadata && window.currentUser.user_metadata.original_redirect_url) {
-          debugLog('Clearing Auth0 user metadata after successful redirect');
-          // Note: This would require an API call to Auth0 to clear the metadata
-          // For now, we'll just log it - the Action should handle cleanup
-        }
+        debugLog('Cleared stored redirect URL');
       }
 
       // Show a message to the user
@@ -216,7 +149,7 @@ export default {
 
       // Perform the redirect
       function performRedirect(url) {
-        debugLog('Redirecting to: ' + url);
+        debugLog('Theme component performing redirect to: ' + url);
         showMessage('Redirecting to original site...', 'info');
         
         // Clear the stored redirect URL
@@ -228,28 +161,11 @@ export default {
         }, getRedirectDelay());
       }
 
-      // Check if we're on a registration page
-      function isOnRegistrationPage() {
-        const currentUrl = window.location.href;
-        const registrationIndicators = [
-          '/signup',
-          '/register',
-          '/welcome',
-          '/onboarding',
-          '/complete',
-          '?signup=1',
-          '?registration=1'
-        ];
-        
-        return registrationIndicators.some(indicator => currentUrl.includes(indicator));
-      }
-
       // Check if user has completed registration
       function checkUserRegistrationStatus() {
         // Check if user is logged in and has a profile
         if (window.currentUser && window.currentUser.id) {
           debugLog('User is logged in, checking registration status');
-          debugLog('User object: ' + JSON.stringify(window.currentUser, null, 2));
           
           // Check if user has a username (indicates completed registration)
           if (window.currentUser.username) {
@@ -265,11 +181,11 @@ export default {
         return false;
       }
 
-      // Handle redirect logic when user is logged in
+      // Handle redirect logic - simplified for new Action approach
       function handleRedirectIfLoggedIn() {
-        debugLog('Checking for redirect - currentUser:', window.currentUser);
+        debugLog('Theme component checking for redirect...');
+        debugLog('Current user:', window.currentUser ? 'Logged in' : 'Not logged in');
         debugLog('Current URL:', window.location.href);
-        debugLog('Stored redirect URL:', localStorage.getItem('oauth2_redirect_url'));
         
         // Check if Auth0 Action has already handled this (user metadata approach)
         if (window.currentUser && window.currentUser.user_metadata && window.currentUser.user_metadata.original_redirect_url) {
@@ -277,46 +193,21 @@ export default {
           return false; // Let the Action handle the redirect
         }
         
+        // Check if user is logged in and has completed registration
+        if (!checkUserRegistrationStatus()) {
+          debugLog('User not fully registered yet, waiting for Action to handle...');
+          return false;
+        }
+        
+        // Look for stored redirect URL as backup
         const storedRedirect = localStorage.getItem('oauth2_redirect_url');
-        
         if (storedRedirect && isValidRedirectUrl(storedRedirect)) {
-          // Check if we're on a registration page - if so, wait
-          if (isOnRegistrationPage()) {
-            debugLog('On registration page, waiting for completion');
-            return false;
-          }
-          
-          if (checkUserRegistrationStatus()) {
-            debugLog('User registration complete, processing redirect');
-            performRedirect(storedRedirect);
-            return true;
-          } else {
-            debugLog('User not fully registered yet, waiting...');
-            return false;
-          }
+          debugLog('Found stored redirect URL, performing backup redirect');
+          performRedirect(storedRedirect);
+          return true;
         }
         
-        // Additional checks for login completion
-        const loginIndicators = [
-          document.querySelector('.current-user'),
-          document.querySelector('[data-current-user]'),
-          document.querySelector('.user-menu'),
-          document.querySelector('.header-dropdown-toggle'),
-          window.location.pathname.includes('/u/'),
-          window.location.pathname.includes('/users/')
-        ];
-        
-        const hasLoginIndicator = loginIndicators.some(indicator => indicator !== null);
-        debugLog('Login indicators found:', hasLoginIndicator);
-        
-        if (hasLoginIndicator) {
-          if (storedRedirect && isValidRedirectUrl(storedRedirect)) {
-            debugLog('Login indicator detected, processing redirect');
-            performRedirect(storedRedirect);
-            return true;
-          }
-        }
-        
+        debugLog('No redirect needed or handled by Action');
         return false;
       }
 
@@ -345,9 +236,9 @@ export default {
       // Also check on initial load
       handleRedirectIfLoggedIn();
 
-      // Periodic check for user login (in case user object becomes available later)
+      // Simple periodic check for user login (reduced frequency)
       let checkCount = 0;
-      const maxChecks = 30; // Check for up to 30 seconds
+      const maxChecks = 10; // Reduced from 30 to 10
       const checkInterval = setInterval(() => {
         checkCount++;
         debugLog(`Periodic check ${checkCount}/${maxChecks} for user login...`);
@@ -359,24 +250,13 @@ export default {
           clearInterval(checkInterval);
           debugLog('Max checks reached, stopping periodic checks');
         }
-      }, 1000);
+      }, 2000); // Increased interval from 1s to 2s
 
-      // Additional check for user profile completion
-      // This handles cases where the user completes registration but doesn't navigate
-      let profileCheckInterval = setInterval(() => {
-        if (checkUserRegistrationStatus()) {
-          debugLog('Profile check: User registration appears complete');
-          if (handleRedirectIfLoggedIn()) {
-            clearInterval(profileCheckInterval);
-          }
-        }
-      }, 3000); // Check every 3 seconds
-
-      // Clear interval after 5 minutes to prevent memory leaks
+      // Clear interval after 2 minutes to prevent memory leaks
       setTimeout(() => {
-        clearInterval(profileCheckInterval);
-        debugLog('Profile check interval cleared');
-      }, 300000);
+        clearInterval(checkInterval);
+        debugLog('Periodic check interval cleared');
+      }, 120000);
     });
   }
 }; 
