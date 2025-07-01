@@ -7,7 +7,7 @@ export default {
     console.log("OAuth2 Redirect Handler JS loaded!");
     // OAuth2 Redirect Handler Theme Component
     // This component serves as a backup redirect mechanism for Auth0 integration
-    // The primary redirect logic is now handled by the Auth0 Action using user metadata
+    // The primary redirect logic is now handled by the Auth0 Action using custom claims
 
     'use strict';
 
@@ -72,9 +72,25 @@ export default {
           return;
         }
 
-        // Check if this is a registration completion scenario
-        // Look for URL parameters that indicate we should redirect back to Auth0
+        // PRIORITY 1: Check for original_redirect URL parameter (primary method from Action)
         const urlParams = new URLSearchParams(window.location.search);
+        const originalRedirectParam = urlParams.get('original_redirect');
+        if (originalRedirectParam && isAllowedDomain(originalRedirectParam)) {
+          console.log(`OAuth2 Redirect Handler: Found original_redirect parameter: ${originalRedirectParam}`);
+          
+          // Clear the parameter from URL to prevent loops
+          const newUrl = new URL(window.location.href);
+          newUrl.searchParams.delete('original_redirect');
+          window.history.replaceState({}, '', newUrl.toString());
+          
+          // Redirect to the original site
+          console.log(`OAuth2 Redirect Handler: Redirecting to original site: ${originalRedirectParam}`);
+          window.location.href = originalRedirectParam;
+          return;
+        }
+
+        // PRIORITY 2: Check if this is a registration completion scenario
+        // Look for URL parameters that indicate we should redirect back to Auth0
         const shouldRedirectToAuth0 = urlParams.get('redirect_to_auth0') === 'true';
         const registrationComplete = urlParams.get('registration_complete') === 'true';
         
@@ -93,7 +109,7 @@ export default {
           return;
         }
 
-        // Check if we have a stored redirect URL in localStorage (fallback method)
+        // PRIORITY 3: Check if we have a stored redirect URL in localStorage (fallback method)
         const storedRedirectUrl = localStorage.getItem('auth0_original_redirect_url');
         if (storedRedirectUrl && isAllowedDomain(storedRedirectUrl)) {
           console.log(`OAuth2 Redirect Handler: Found stored redirect URL: ${storedRedirectUrl}`);
@@ -107,7 +123,7 @@ export default {
           return;
         }
 
-        // Check if user has completed registration and we should redirect
+        // PRIORITY 4: Check if user has completed registration and we should redirect
         // This is a fallback mechanism in case the Auth0 Action doesn't handle the redirect
         const userRegistrationTime = currentUser.created_at;
         const currentTime = new Date().getTime();
@@ -157,7 +173,9 @@ export default {
       const urlParams = new URLSearchParams(window.location.search);
       
       // Check if this is an OAuth callback with redirect information
-      const originalUrl = urlParams.get('original_url') || 
+      // Updated to prioritize original_redirect parameter (used by the Action)
+      const originalUrl = urlParams.get('original_redirect') ||
+                         urlParams.get('original_url') || 
                          urlParams.get('saml_redirect') || 
                          urlParams.get('return_to') ||
                          urlParams.get('returnTo');
