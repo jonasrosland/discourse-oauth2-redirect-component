@@ -1,13 +1,13 @@
 import { withPluginApi } from "discourse/lib/plugin-api";
 
 export default {
-  name: "oauth2-redirect-handler",
+  name: "community-signup-redirect-handler",
 
   initialize() {
-    console.log("OAuth2 Redirect Handler JS loaded!");
-    // OAuth2 Redirect Handler Theme Component
-    // This component serves as a backup redirect mechanism for Auth0 integration
-    // The primary redirect logic is now handled by the Auth0 Action using custom claims
+    console.log("Community Signup Redirect Handler JS loaded!");
+    // Community Signup Redirect Handler Theme Component
+    // This component handles redirects after users complete community account registration
+    // Works with the Auth0 Action that redirects users to direct signup flow
 
     'use strict';
 
@@ -82,29 +82,29 @@ export default {
 
       // Main redirect handler function
       function handleRedirect() {
-        console.log('OAuth2 Redirect Handler: Checking for redirect conditions...');
+        console.log('Community Signup Redirect Handler: Checking for redirect conditions...');
         
         // Check if user is logged in
         const currentUser = api.getCurrentUser();
         if (!currentUser) {
-          console.log('OAuth2 Redirect Handler: No current user found, skipping redirect');
+          console.log('Community Signup Redirect Handler: No current user found, skipping redirect');
           return;
         }
 
-        console.log(`OAuth2 Redirect Handler: User logged in: ${currentUser.email}`);
-        console.log(`OAuth2 Redirect Handler: User created at: ${currentUser.created_at}`);
-        console.log(`OAuth2 Redirect Handler: Current URL: ${window.location.href}`);
+        console.log(`Community Signup Redirect Handler: User logged in: ${currentUser.email}`);
+        console.log(`Community Signup Redirect Handler: User created at: ${currentUser.created_at}`);
+        console.log(`Community Signup Redirect Handler: Current URL: ${window.location.href}`);
 
         // PRIORITY 1: Check for return_url parameter (from direct signup flow)
         const urlParams = new URLSearchParams(window.location.search);
         const returnUrlParam = urlParams.get('return_url');
         
         if (returnUrlParam && isAllowedDomain(returnUrlParam)) {
-          console.log(`OAuth2 Redirect Handler: Found return_url parameter: ${returnUrlParam}`);
+          console.log(`Community Signup Redirect Handler: Found return_url parameter: ${returnUrlParam}`);
           
           // Only redirect if user has completed registration
           if (!hasCompletedRegistration(currentUser)) {
-            console.log('OAuth2 Redirect Handler: User has not completed registration yet, waiting...');
+            console.log('Community Signup Redirect Handler: User has not completed registration yet, waiting...');
             return;
           }
           
@@ -114,7 +114,7 @@ export default {
           window.history.replaceState({}, '', newUrl.toString());
           
           // Redirect to the original site
-          console.log(`OAuth2 Redirect Handler: Redirecting to original site: ${returnUrlParam}`);
+          console.log(`Community Signup Redirect Handler: Redirecting to original site: ${returnUrlParam}`);
           window.location.href = returnUrlParam;
           return;
         }
@@ -140,26 +140,6 @@ export default {
           // Redirect to the original site
           console.log(`OAuth2 Redirect Handler: Redirecting to original site: ${originalRedirectParam}`);
           window.location.href = originalRedirectParam;
-          return;
-        }
-
-        // PRIORITY 2: Check if this is a registration completion scenario
-        // Look for URL parameters that indicate we should redirect back to Auth0
-        const shouldRedirectToAuth0 = urlParams.get('redirect_to_auth0') === 'true';
-        const registrationComplete = urlParams.get('registration_complete') === 'true';
-        
-        if (shouldRedirectToAuth0 || registrationComplete) {
-          console.log('OAuth2 Redirect Handler: Registration completion detected, redirecting to Auth0');
-          
-          // Redirect back to Auth0 to complete the flow
-          const auth0RedirectUrl = 'https://vastdata.auth0.com/authorize?' +
-            'client_id=2dtcwKoZnrnIbAdwnHxJJNcqLvAD3yK9&' +
-            'redirect_uri=https://community.vastdata.com/auth/oauth2_basic/callback&' +
-            'response_type=code&' +
-            'scope=openid profile email';
-          
-          console.log(`OAuth2 Redirect Handler: Redirecting to Auth0: ${auth0RedirectUrl}`);
-          window.location.href = auth0RedirectUrl;
           return;
         }
 
