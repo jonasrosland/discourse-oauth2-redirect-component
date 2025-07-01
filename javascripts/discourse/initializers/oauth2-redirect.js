@@ -37,6 +37,49 @@ export default {
         }
       }
 
+      // Check if user is currently on a registration/signup page
+      function isOnRegistrationPage() {
+        const pathname = window.location.pathname;
+        const hasSignupForm = document.querySelector('.signup-form, .registration-form, .create-account-form');
+        const hasSignupButton = document.querySelector('button[title="Create Account"], .btn-signup, .btn-register');
+        
+        return pathname.includes('/signup') || 
+               pathname.includes('/register') || 
+               pathname.includes('/create-account') ||
+               hasSignupForm ||
+               hasSignupButton;
+      }
+
+      // Check if user has completed registration (has username and is not on signup page)
+      function hasCompletedRegistration(currentUser) {
+        if (!currentUser) return false;
+        
+        // User must have a username
+        if (!currentUser.username) {
+          console.log('OAuth2 Redirect Handler: User has no username - registration incomplete');
+          return false;
+        }
+        
+        // User must not be on a registration page
+        if (isOnRegistrationPage()) {
+          console.log('OAuth2 Redirect Handler: User is on registration page - waiting for completion');
+          return false;
+        }
+        
+        // Check if user has been active for at least 30 seconds (indicates they've had time to complete registration)
+        const userCreatedTime = new Date(currentUser.created_at).getTime();
+        const currentTime = new Date().getTime();
+        const timeSinceCreation = currentTime - userCreatedTime;
+        
+        if (timeSinceCreation < 30000) { // 30 seconds
+          console.log(`OAuth2 Redirect Handler: User created recently (${timeSinceCreation}ms ago) - waiting for registration completion`);
+          return false;
+        }
+        
+        console.log(`OAuth2 Redirect Handler: User appears to have completed registration (username: ${currentUser.username}, created ${timeSinceCreation}ms ago)`);
+        return true;
+      }
+
       // Main redirect handler function
       function handleRedirect() {
         console.log('OAuth2 Redirect Handler: Checking for redirect conditions...');
@@ -52,32 +95,18 @@ export default {
         console.log(`OAuth2 Redirect Handler: User created at: ${currentUser.created_at}`);
         console.log(`OAuth2 Redirect Handler: Current URL: ${window.location.href}`);
 
-        // Check if user is on the signup page - if so, don't redirect yet
-        const isOnSignupPage = window.location.pathname.includes('/signup') || 
-                              window.location.pathname.includes('/register') ||
-                              document.querySelector('.signup-form') ||
-                              document.querySelector('.registration-form');
-        
-        if (isOnSignupPage) {
-          console.log('OAuth2 Redirect Handler: User is on signup page, waiting for registration completion');
-          return;
-        }
-
-        // Check if user has a username (indicates completed registration)
-        if (currentUser.username) {
-          console.log(`OAuth2 Redirect Handler: User has username: ${currentUser.username}, registration appears complete`);
-        } else {
-          console.log('OAuth2 Redirect Handler: User logged in but no username - registration may be incomplete');
-          // Don't redirect if user doesn't have a username yet
-          return;
-        }
-
         // PRIORITY 1: Check for original_redirect URL parameter (primary method from Action)
         const urlParams = new URLSearchParams(window.location.search);
         const originalRedirectParam = urlParams.get('original_redirect');
         
         if (originalRedirectParam && isAllowedDomain(originalRedirectParam)) {
           console.log(`OAuth2 Redirect Handler: Found original_redirect parameter: ${originalRedirectParam}`);
+          
+          // Only redirect if user has completed registration
+          if (!hasCompletedRegistration(currentUser)) {
+            console.log('OAuth2 Redirect Handler: User has not completed registration yet, waiting...');
+            return;
+          }
           
           // Clear the parameter from URL to prevent loops
           const newUrl = new URL(window.location.href);
@@ -116,6 +145,12 @@ export default {
         if (storedRedirectUrl && isAllowedDomain(storedRedirectUrl)) {
           console.log(`OAuth2 Redirect Handler: Found stored redirect URL: ${storedRedirectUrl}`);
           
+          // Only redirect if user has completed registration
+          if (!hasCompletedRegistration(currentUser)) {
+            console.log('OAuth2 Redirect Handler: User has not completed registration yet, waiting...');
+            return;
+          }
+          
           // Clear the stored URL
           localStorage.removeItem('auth0_original_redirect_url');
           
@@ -125,48 +160,52 @@ export default {
           return;
         }
 
-        // PRIORITY 4: Check if user has completed registration and we should redirect
-        // This is a fallback mechanism in case the Auth0 Action doesn't handle the redirect
-        const userRegistrationTime = currentUser.created_at;
-        const currentTime = new Date().getTime();
-        const timeSinceRegistration = currentTime - new Date(userRegistrationTime).getTime();
-        
-        // If user was created in the last 5 minutes, they might have just completed registration
-        if (timeSinceRegistration < 5 * 60 * 1000) {
-          console.log('OAuth2 Redirect Handler: Recent registration detected, checking for redirect');
-          console.log(`OAuth2 Redirect Handler: Time since registration: ${timeSinceRegistration}ms`);
+        // PRIORITY 4: Fallback redirect for recently registered users
+        // Only if user has completed registration and we have no other redirect info
+        if (hasCompletedRegistration(currentUser)) {
+          const userRegistrationTime = currentUser.created_at;
+          const currentTime = new Date().getTime();
+          const timeSinceRegistration = currentTime - new Date(userRegistrationTime).getTime();
           
-          // Check if we have any stored redirect information
-          const fallbackRedirectUrl = 'https://vastdatacustomers.mindtickle.com';
-          console.log(`OAuth2 Redirect Handler: Using fallback redirect URL: ${fallbackRedirectUrl}`);
-          
-          // Redirect to the fallback URL
-          window.location.href = fallbackRedirectUrl;
-          return;
+          // If user was created in the last 10 minutes, they might have just completed registration
+          if (timeSinceRegistration < 10 * 60 * 1000) {
+            console.log('OAuth2 Redirect Handler: Recent registration detected, using fallback redirect');
+            console.log(`OAuth2 Redirect Handler: Time since registration: ${timeSinceRegistration}ms`);
+            
+            // Check if we have any stored redirect information
+            const fallbackRedirectUrl = 'https://vastdatacustomers.mindtickle.com';
+            console.log(`OAuth2 Redirect Handler: Using fallback redirect URL: ${fallbackRedirectUrl}`);
+            
+            // Redirect to the fallback URL
+            window.location.href = fallbackRedirectUrl;
+            return;
+          }
         }
 
         console.log('OAuth2 Redirect Handler: No redirect conditions met');
       }
 
-      // Run redirect check when the page loads
+      // Run redirect check with longer delays to allow for registration completion
       api.onPageChange(() => {
-        // Small delay to ensure user data is loaded
-        setTimeout(handleRedirect, 1000);
+        // Longer delay to ensure user has time to complete registration
+        setTimeout(handleRedirect, 5000);
       });
 
-      // Also run on initial load
-      setTimeout(handleRedirect, 2000);
+      // Also run on initial load with longer delay
+      setTimeout(handleRedirect, 10000);
 
       // Listen for user login events
       api.onAppEvent('user:logged-in', () => {
         console.log('OAuth2 Redirect Handler: User logged in event detected');
-        setTimeout(handleRedirect, 1000);
+        // Don't redirect immediately on login - wait for registration completion
+        setTimeout(handleRedirect, 10000);
       });
 
       // Listen for user registration events
       api.onAppEvent('user:registered', () => {
         console.log('OAuth2 Redirect Handler: User registered event detected');
-        setTimeout(handleRedirect, 1000);
+        // Wait longer after registration to ensure completion
+        setTimeout(handleRedirect, 15000);
       });
 
       // Store redirect URL when user is redirected to Discourse
