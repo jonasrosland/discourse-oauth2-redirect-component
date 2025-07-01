@@ -16,7 +16,7 @@ export default {
       function getAllowedDomains() {
         try {
           if (typeof settings !== 'undefined' && settings.whitelisted_domains && Array.isArray(settings.whitelisted_domains)) {
-            return settings.whitelisted_domains;
+          return settings.whitelisted_domains;
           }
         } catch (e) {
           console.log('Error accessing settings.whitelisted_domains:', e);
