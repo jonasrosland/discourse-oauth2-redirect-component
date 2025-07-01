@@ -14,9 +14,14 @@ export default {
     withPluginApi("0.8.7", api => {
       // Get allowed domains from theme settings
       function getAllowedDomains() {
-        if (typeof settings !== 'undefined' && settings.whitelisted_domains) {
-          return settings.whitelisted_domains;
+        try {
+          if (typeof settings !== 'undefined' && settings.whitelisted_domains && Array.isArray(settings.whitelisted_domains)) {
+            return settings.whitelisted_domains;
+          }
+        } catch (e) {
+          console.log('Error accessing settings.whitelisted_domains:', e);
         }
+        
         // Default allowed domains
         return [
           'vastdatacustomers.mindtickle.com',
@@ -28,9 +33,26 @@ export default {
       // Check if a URL is in the allowed domains list
       function isAllowedDomain(url) {
         try {
+          if (!url || typeof url !== 'string') {
+            console.log('Invalid URL provided to isAllowedDomain:', url);
+            return false;
+          }
+          
           const urlObj = new URL(url);
           const allowedDomains = getAllowedDomains();
-          return allowedDomains.some(domain => urlObj.hostname.includes(domain));
+          
+          if (!Array.isArray(allowedDomains)) {
+            console.log('Allowed domains is not an array:', allowedDomains);
+            return false;
+          }
+          
+          return allowedDomains.some(domain => {
+            if (typeof domain !== 'string') {
+              console.log('Invalid domain in allowedDomains:', domain);
+              return false;
+            }
+            return urlObj.hostname.includes(domain);
+          });
         } catch (e) {
           console.log('Error parsing URL for domain check:', e);
           return false;
