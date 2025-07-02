@@ -9,4 +9,76 @@ redirect_delay:
 debug_mode:
   default: false
   type: bool
-  description: "Enable debug logging in browser console" 
+  description: "Enable debug logging in browser console"
+
+# Signup Subheader Settings
+signup_subheader_enabled:
+  default: true
+  type: bool
+  description: "Enable the signup value proposition subheader"
+
+signup_subheader_title:
+  default: "Join the VAST Data Community"
+  type: string
+  description: "Main title for the signup subheader"
+
+signup_subheader_cta:
+  default: "Create your account to unlock these benefits and start your VAST Data journey!"
+  type: string
+  description: "Call-to-action text at the bottom of the subheader"
+
+# Benefit 1
+benefit_1_icon:
+  default: "🎓"
+  type: string
+  description: "Icon for benefit 1 (emoji or text)"
+benefit_1_title:
+  default: "Access Mindtickle Learning Platform"
+  type: string
+  description: "Title for benefit 1"
+benefit_1_description:
+  default: "Get exclusive access to VAST Data training, certifications, and learning paths"
+  type: string
+  description: "Description for benefit 1"
+
+# Benefit 2
+benefit_2_icon:
+  default: "🔬"
+  type: string
+  description: "Icon for benefit 2 (emoji or text)"
+benefit_2_title:
+  default: "Explore VAST Data Labs"
+  type: string
+  description: "Title for benefit 2"
+benefit_2_description:
+  default: "Hands-on labs and tutorials to master VAST Data technologies"
+  type: string
+  description: "Description for benefit 2"
+
+# Benefit 3
+benefit_3_icon:
+  default: "👥"
+  type: string
+  description: "Icon for benefit 3 (emoji or text)"
+benefit_3_title:
+  default: "Connect with Experts"
+  type: string
+  description: "Title for benefit 3"
+benefit_3_description:
+  default: "Join discussions with VAST Data engineers, architects, and community members"
+  type: string
+  description: "Description for benefit 3"
+
+# Benefit 4
+benefit_4_icon:
+  default: "📚"
+  type: string
+  description: "Icon for benefit 4 (emoji or text)"
+benefit_4_title:
+  default: "Access Resources"
+  type: string
+  description: "Title for benefit 4"
+benefit_4_description:
+  default: "Documentation, best practices, and troubleshooting guides"
+  type: string
+  description: "Description for benefit 4" 

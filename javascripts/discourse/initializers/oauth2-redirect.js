@@ -78,6 +78,271 @@ export default {
         }
       }
 
+      // Add compelling signup subheader
+      function addSignupSubheader() {
+        // Check if subheader is enabled
+        try {
+          if (typeof settings !== 'undefined' && settings.signup_subheader_enabled === false) {
+            console.log('Community Signup Redirect Handler: Signup subheader is disabled in settings');
+            return;
+          }
+        } catch (e) {
+          console.log('Community Signup Redirect Handler: Could not check subheader setting, proceeding anyway');
+        }
+
+        // Check if we're on a signup page
+        const isSignupPage = window.location.pathname.includes('/signup') || 
+                           window.location.pathname.includes('/register') ||
+                           document.querySelector('.signup-form, .registration-form, .create-account-form');
+        
+        if (!isSignupPage) {
+          return;
+        }
+
+        console.log('Community Signup Redirect Handler: Adding signup subheader');
+
+        // Get settings with fallbacks
+        function getSetting(key, defaultValue) {
+          try {
+            if (typeof settings !== 'undefined' && settings[key] !== undefined) {
+              return settings[key];
+            }
+          } catch (e) {
+            console.log(`Community Signup Redirect Handler: Could not access setting ${key}, using default`);
+          }
+          return defaultValue;
+        }
+
+        // Get all the settings
+        const title = getSetting('signup_subheader_title', 'Join the VAST Data Community');
+        const cta = getSetting('signup_subheader_cta', 'Create your account to unlock these benefits and start your VAST Data journey!');
+        
+        const benefit1Icon = getSetting('benefit_1_icon', '🎓');
+        const benefit1Title = getSetting('benefit_1_title', 'Access Mindtickle Learning Platform');
+        const benefit1Desc = getSetting('benefit_1_description', 'Get exclusive access to VAST Data training, certifications, and learning paths');
+        
+        const benefit2Icon = getSetting('benefit_2_icon', '🔬');
+        const benefit2Title = getSetting('benefit_2_title', 'Explore VAST Data Labs');
+        const benefit2Desc = getSetting('benefit_2_description', 'Hands-on labs and tutorials to master VAST Data technologies');
+        
+        const benefit3Icon = getSetting('benefit_3_icon', '👥');
+        const benefit3Title = getSetting('benefit_3_title', 'Connect with Experts');
+        const benefit3Desc = getSetting('benefit_3_description', 'Join discussions with VAST Data engineers, architects, and community members');
+        
+        const benefit4Icon = getSetting('benefit_4_icon', '📚');
+        const benefit4Title = getSetting('benefit_4_title', 'Access Resources');
+        const benefit4Desc = getSetting('benefit_4_description', 'Documentation, best practices, and troubleshooting guides');
+
+        // Create the subheader content
+        const subheaderContent = `
+          <div class="signup-value-proposition">
+            <div class="value-proposition-content">
+              <h3 class="value-proposition-title">${title}</h3>
+              <div class="value-proposition-benefits">
+                <div class="benefit-item">
+                  <div class="benefit-icon">${benefit1Icon}</div>
+                  <div class="benefit-text">
+                    <strong>${benefit1Title}</strong>
+                    <span>${benefit1Desc}</span>
+                  </div>
+                </div>
+                <div class="benefit-item">
+                  <div class="benefit-icon">${benefit2Icon}</div>
+                  <div class="benefit-text">
+                    <strong>${benefit2Title}</strong>
+                    <span>${benefit2Desc}</span>
+                  </div>
+                </div>
+                <div class="benefit-item">
+                  <div class="benefit-icon">${benefit3Icon}</div>
+                  <div class="benefit-text">
+                    <strong>${benefit3Title}</strong>
+                    <span>${benefit3Desc}</span>
+                  </div>
+                </div>
+                <div class="benefit-item">
+                  <div class="benefit-icon">${benefit4Icon}</div>
+                  <div class="benefit-text">
+                    <strong>${benefit4Title}</strong>
+                    <span>${benefit4Desc}</span>
+                  </div>
+                </div>
+              </div>
+              <div class="value-proposition-cta">
+                <p>${cta}</p>
+              </div>
+            </div>
+          </div>
+        `;
+
+        // Add CSS styles
+        const style = document.createElement('style');
+        style.textContent = `
+          .signup-value-proposition {
+            background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 24px;
+            margin: 20px 0;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+          }
+
+          .value-proposition-content {
+            max-width: 100%;
+          }
+
+          .value-proposition-title {
+            color: #1e293b;
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin: 0 0 16px 0;
+            text-align: center;
+          }
+
+          .value-proposition-benefits {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 16px;
+            margin-bottom: 20px;
+          }
+
+          .benefit-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            padding: 12px;
+            background: white;
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+            transition: all 0.2s ease;
+          }
+
+          .benefit-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            border-color: #3b82f6;
+          }
+
+          .benefit-icon {
+            font-size: 1.5rem;
+            flex-shrink: 0;
+            margin-top: 2px;
+          }
+
+          .benefit-text {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+          }
+
+          .benefit-text strong {
+            color: #1e293b;
+            font-size: 0.875rem;
+            font-weight: 600;
+          }
+
+          .benefit-text span {
+            color: #64748b;
+            font-size: 0.8125rem;
+            line-height: 1.4;
+          }
+
+          .value-proposition-cta {
+            text-align: center;
+            padding: 16px;
+            background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+            border-radius: 8px;
+            color: white;
+          }
+
+          .value-proposition-cta p {
+            margin: 0;
+            font-size: 0.875rem;
+            font-weight: 500;
+          }
+
+          /* Responsive design */
+          @media (max-width: 768px) {
+            .value-proposition-benefits {
+              grid-template-columns: 1fr;
+            }
+            
+            .signup-value-proposition {
+              padding: 16px;
+              margin: 16px 0;
+            }
+            
+            .value-proposition-title {
+              font-size: 1.125rem;
+            }
+          }
+
+          /* Dark mode support */
+          @media (prefers-color-scheme: dark) {
+            .signup-value-proposition {
+              background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+              border-color: #475569;
+            }
+            
+            .value-proposition-title {
+              color: #f1f5f9;
+            }
+            
+            .benefit-item {
+              background: #334155;
+              border-color: #475569;
+            }
+            
+            .benefit-text strong {
+              color: #f1f5f9;
+            }
+            
+            .benefit-text span {
+              color: #cbd5e1;
+            }
+          }
+        `;
+
+        // Find the signup form or title to insert the subheader after
+        const signupForm = document.querySelector('.signup-form, .registration-form, .create-account-form, form[action*="signup"], form[action*="register"]');
+        const signupTitle = document.querySelector('h1, h2, .title, .signup-title');
+        
+        let insertTarget = null;
+        let insertPosition = 'after';
+
+        if (signupTitle) {
+          insertTarget = signupTitle;
+          insertPosition = 'after';
+        } else if (signupForm) {
+          insertTarget = signupForm;
+          insertPosition = 'before';
+        } else {
+          // Fallback: insert at the beginning of the main content
+          insertTarget = document.querySelector('main, .main-content, .content, #main');
+          insertPosition = 'after';
+        }
+
+        if (insertTarget) {
+          // Create the subheader element
+          const subheaderElement = document.createElement('div');
+          subheaderElement.innerHTML = subheaderContent;
+          
+          // Insert the subheader
+          if (insertPosition === 'after') {
+            insertTarget.parentNode.insertBefore(subheaderElement, insertTarget.nextSibling);
+          } else {
+            insertTarget.parentNode.insertBefore(subheaderElement, insertTarget);
+          }
+          
+          // Add the styles
+          document.head.appendChild(style);
+          
+          console.log('Community Signup Redirect Handler: Signup subheader added successfully');
+        } else {
+          console.log('Community Signup Redirect Handler: Could not find target element for subheader');
+        }
+      }
+
       // Create countdown CTA element
       function createCountdownCTA(redirectUrl, destinationName) {
         console.log(`Community Signup Redirect Handler: Creating countdown CTA for ${destinationName} (${redirectUrl})`);
@@ -642,6 +907,9 @@ export default {
       }
 
       console.log('Community Signup Redirect Handler: Initialization complete');
+      
+      // Add signup subheader on page load
+      addSignupSubheader();
       
       // Add test function to global scope for debugging
       window.testRedirectCTA = function() {
