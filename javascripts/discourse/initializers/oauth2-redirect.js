@@ -316,20 +316,36 @@ export default {
         // Find the signup form or title to insert the subheader after
         const signupForm = document.querySelector('.signup-form, .registration-form, .create-account-form, form[action*="signup"], form[action*="register"]');
         const signupTitle = document.querySelector('h1, h2, .title, .signup-title');
+        const mainContent = document.querySelector('main, .main-content, .content, #main');
+        const body = document.body;
+        
+        console.log('Community Signup Redirect Handler: Available insertion targets:');
+        console.log('- signupForm:', signupForm);
+        console.log('- signupTitle:', signupTitle);
+        console.log('- mainContent:', mainContent);
+        console.log('- body:', body);
         
         let insertTarget = null;
         let insertPosition = 'after';
 
+        // Try multiple insertion strategies
         if (signupTitle) {
           insertTarget = signupTitle;
           insertPosition = 'after';
+          console.log('Community Signup Redirect Handler: Using signup title as target');
         } else if (signupForm) {
           insertTarget = signupForm;
           insertPosition = 'before';
-        } else {
-          // Fallback: insert at the beginning of the main content
-          insertTarget = document.querySelector('main, .main-content, .content, #main');
+          console.log('Community Signup Redirect Handler: Using signup form as target');
+        } else if (mainContent) {
+          insertTarget = mainContent;
           insertPosition = 'after';
+          console.log('Community Signup Redirect Handler: Using main content as target');
+        } else {
+          // Last resort: insert at the beginning of body
+          insertTarget = body;
+          insertPosition = 'after';
+          console.log('Community Signup Redirect Handler: Using body as target (fallback)');
         }
 
         if (insertTarget) {
@@ -352,6 +368,19 @@ export default {
           
           console.log('Community Signup Redirect Handler: Signup subheader added successfully');
           console.log('Community Signup Redirect Handler: Subheader element:', subheaderElement);
+          console.log('Community Signup Redirect Handler: Subheader HTML:', subheaderElement.innerHTML);
+          console.log('Community Signup Redirect Handler: Styles added to head');
+          
+          // Check if the element is actually in the DOM
+          setTimeout(() => {
+            const addedElement = document.querySelector('.signup-value-proposition');
+            if (addedElement) {
+              console.log('Community Signup Redirect Handler: Subheader found in DOM:', addedElement);
+              console.log('Community Signup Redirect Handler: Subheader computed style:', window.getComputedStyle(addedElement));
+            } else {
+              console.log('Community Signup Redirect Handler: Subheader NOT found in DOM after insertion');
+            }
+          }, 100);
         } else {
           console.log('Community Signup Redirect Handler: Could not find target element for subheader');
           console.log('Community Signup Redirect Handler: Available elements:');
@@ -939,6 +968,39 @@ export default {
       window.testSubheader = function() {
         console.log('Community Signup Redirect Handler: Testing subheader manually');
         addSignupSubheader();
+      };
+      
+      // Add test function that forces subheader to be visible
+      window.forceSubheader = function() {
+        console.log('Community Signup Redirect Handler: Forcing subheader to be visible');
+        
+        // Remove any existing subheader
+        const existing = document.querySelector('.signup-value-proposition');
+        if (existing) {
+          existing.remove();
+        }
+        
+        // Create and insert at the very top of the page
+        const subheaderElement = document.createElement('div');
+        subheaderElement.innerHTML = `
+          <div class="signup-value-proposition" style="position: fixed; top: 0; left: 0; right: 0; z-index: 9999; background: red !important; color: white !important;">
+            <div class="value-proposition-content">
+              <h3 class="value-proposition-title">FORCED SUBHEADER TEST</h3>
+              <div class="value-proposition-benefits">
+                <div class="benefit-item">
+                  <div class="benefit-icon">🎓</div>
+                  <div class="benefit-text">
+                    <strong>Test Benefit</strong>
+                    <span>This is a test to see if the subheader works</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        `;
+        
+        document.body.insertBefore(subheaderElement, document.body.firstChild);
+        console.log('Community Signup Redirect Handler: Forced subheader added');
       };
       
       // Add test function that simulates a redirect scenario
