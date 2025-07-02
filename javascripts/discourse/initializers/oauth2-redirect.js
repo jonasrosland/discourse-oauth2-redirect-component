@@ -314,29 +314,58 @@ export default {
         `;
 
         // Find the signup form or title to insert the subheader after
+        // For Discourse signup modal, we need to target specific elements within the modal
         const signupForm = document.querySelector('.signup-form, .registration-form, .create-account-form, form[action*="signup"], form[action*="register"]');
         const signupTitle = document.querySelector('h1, h2, .title, .signup-title');
+        
+        // Look for Discourse-specific signup elements
+        const discourseModal = document.querySelector('.modal-inner, .d-modal, .modal');
+        const discourseSignupTitle = document.querySelector('.modal-inner h1, .d-modal h1, .modal h1, .signup-modal h1');
+        const discourseSignupForm = document.querySelector('.modal-inner form, .d-modal form, .modal form, .signup-modal form');
+        const discourseModalBody = document.querySelector('.modal-inner .modal-body, .d-modal .modal-body, .modal .modal-body');
+        
+        // Fallback elements
         const mainContent = document.querySelector('main, .main-content, .content, #main');
         const body = document.body;
         
         console.log('Community Signup Redirect Handler: Available insertion targets:');
         console.log('- signupForm:', signupForm);
         console.log('- signupTitle:', signupTitle);
+        console.log('- discourseModal:', discourseModal);
+        console.log('- discourseSignupTitle:', discourseSignupTitle);
+        console.log('- discourseSignupForm:', discourseSignupForm);
+        console.log('- discourseModalBody:', discourseModalBody);
         console.log('- mainContent:', mainContent);
         console.log('- body:', body);
         
         let insertTarget = null;
         let insertPosition = 'after';
 
-        // Try multiple insertion strategies
-        if (signupTitle) {
+        // Try multiple insertion strategies, prioritizing Discourse modal elements
+        if (discourseSignupTitle) {
+          insertTarget = discourseSignupTitle;
+          insertPosition = 'after';
+          console.log('Community Signup Redirect Handler: Using Discourse signup title as target');
+        } else if (discourseSignupForm) {
+          insertTarget = discourseSignupForm;
+          insertPosition = 'before';
+          console.log('Community Signup Redirect Handler: Using Discourse signup form as target');
+        } else if (discourseModalBody) {
+          insertTarget = discourseModalBody;
+          insertPosition = 'after';
+          console.log('Community Signup Redirect Handler: Using Discourse modal body as target');
+        } else if (discourseModal) {
+          insertTarget = discourseModal;
+          insertPosition = 'after';
+          console.log('Community Signup Redirect Handler: Using Discourse modal as target');
+        } else if (signupTitle) {
           insertTarget = signupTitle;
           insertPosition = 'after';
-          console.log('Community Signup Redirect Handler: Using signup title as target');
+          console.log('Community Signup Redirect Handler: Using generic signup title as target');
         } else if (signupForm) {
           insertTarget = signupForm;
           insertPosition = 'before';
-          console.log('Community Signup Redirect Handler: Using signup form as target');
+          console.log('Community Signup Redirect Handler: Using generic signup form as target');
         } else if (mainContent) {
           insertTarget = mainContent;
           insertPosition = 'after';
@@ -955,8 +984,11 @@ export default {
 
       console.log('Community Signup Redirect Handler: Initialization complete');
       
-      // Add signup subheader on page load
-      addSignupSubheader();
+      // Add signup subheader on page load with delay to ensure modal is loaded
+      setTimeout(addSignupSubheader, 1000);
+      
+      // Also try again after a longer delay in case the modal loads later
+      setTimeout(addSignupSubheader, 3000);
       
       // Add test function to global scope for debugging
       window.testRedirectCTA = function() {
