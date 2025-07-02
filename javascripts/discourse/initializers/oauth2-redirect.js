@@ -80,6 +80,10 @@ export default {
 
       // Add compelling signup subheader
       function addSignupSubheader() {
+        console.log('Community Signup Redirect Handler: === SIGNUP SUBHEADER CHECK STARTED ===');
+        console.log('Community Signup Redirect Handler: Current pathname:', window.location.pathname);
+        console.log('Community Signup Redirect Handler: Current URL:', window.location.href);
+        
         // Check if subheader is enabled
         try {
           if (typeof settings !== 'undefined' && settings.signup_subheader_enabled === false) {
@@ -91,11 +95,17 @@ export default {
         }
 
         // Check if we're on a signup page
-        const isSignupPage = window.location.pathname.includes('/signup') || 
-                           window.location.pathname.includes('/register') ||
-                           document.querySelector('.signup-form, .registration-form, .create-account-form');
+        const pathnameCheck = window.location.pathname.includes('/signup') || window.location.pathname.includes('/register');
+        const formCheck = document.querySelector('.signup-form, .registration-form, .create-account-form');
+        
+        console.log('Community Signup Redirect Handler: Pathname check:', pathnameCheck);
+        console.log('Community Signup Redirect Handler: Form check:', !!formCheck);
+        console.log('Community Signup Redirect Handler: Found forms:', document.querySelectorAll('.signup-form, .registration-form, .create-account-form').length);
+        
+        const isSignupPage = pathnameCheck || formCheck;
         
         if (!isSignupPage) {
+          console.log('Community Signup Redirect Handler: Not on signup page, skipping subheader');
           return;
         }
 
@@ -323,6 +333,9 @@ export default {
         }
 
         if (insertTarget) {
+          console.log('Community Signup Redirect Handler: Found insert target:', insertTarget.tagName, insertTarget.className);
+          console.log('Community Signup Redirect Handler: Insert position:', insertPosition);
+          
           // Create the subheader element
           const subheaderElement = document.createElement('div');
           subheaderElement.innerHTML = subheaderContent;
@@ -338,8 +351,13 @@ export default {
           document.head.appendChild(style);
           
           console.log('Community Signup Redirect Handler: Signup subheader added successfully');
+          console.log('Community Signup Redirect Handler: Subheader element:', subheaderElement);
         } else {
           console.log('Community Signup Redirect Handler: Could not find target element for subheader');
+          console.log('Community Signup Redirect Handler: Available elements:');
+          console.log('- signupForm:', document.querySelector('.signup-form, .registration-form, .create-account-form, form[action*="signup"], form[action*="register"]'));
+          console.log('- signupTitle:', document.querySelector('h1, h2, .title, .signup-title'));
+          console.log('- mainContent:', document.querySelector('main, .main-content, .content, #main'));
         }
       }
 
@@ -915,6 +933,12 @@ export default {
       window.testRedirectCTA = function() {
         console.log('Community Signup Redirect Handler: Testing CTA manually');
         createCountdownCTA('https://vastdatacustomers.mindtickle.com', 'Mindtickle');
+      };
+      
+      // Add test function for subheader
+      window.testSubheader = function() {
+        console.log('Community Signup Redirect Handler: Testing subheader manually');
+        addSignupSubheader();
       };
       
       // Add test function that simulates a redirect scenario
