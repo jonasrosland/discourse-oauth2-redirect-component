@@ -1,0 +1,45 @@
+import Component from "@ember/component";
+import { hbs } from "ember-cli-htmlbars";
+
+export default Component.extend({
+  layout: hbs`
+    <div class="signup-value-proposition">
+      <div class="value-proposition-content">
+        <h3 class="value-proposition-title">Join the VAST Data Community</h3>
+        <div class="value-proposition-benefits">
+          <div class="benefit-item">
+            <div class="benefit-icon">🎓</div>
+            <div class="benefit-text">
+              <strong>Access Mindtickle Learning Platform</strong>
+              <span>Get exclusive access to VAST Data training, certifications, and learning paths</span>
+            </div>
+          </div>
+          <div class="benefit-item">
+            <div class="benefit-icon">🔬</div>
+            <div class="benefit-text">
+              <strong>Explore VAST Data Labs</strong>
+              <span>Hands-on labs and tutorials to master VAST Data technologies</span>
+            </div>
+          </div>
+          <div class="benefit-item">
+            <div class="benefit-icon">👥</div>
+            <div class="benefit-text">
+              <strong>Connect with Experts</strong>
+              <span>Join discussions with VAST Data engineers, architects, and community members</span>
+            </div>
+          </div>
+          <div class="benefit-item">
+            <div class="benefit-icon">📚</div>
+            <div class="benefit-text">
+              <strong>Access Resources</strong>
+              <span>Documentation, best practices, and troubleshooting guides</span>
+            </div>
+          </div>
+        </div>
+        <div class="value-proposition-cta">
+          <p>Create your account to unlock these benefits and start your VAST Data journey!</p>
+        </div>
+      </div>
+    </div>
+  `
+}); 
