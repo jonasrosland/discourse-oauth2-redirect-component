@@ -391,11 +391,15 @@ export default {
         const urlParams = new URLSearchParams(window.location.search);
         const returnUrlParam = urlParams.get('return_url');
         
+        console.log(`Community Signup Redirect Handler: Checking return_url parameter: ${returnUrlParam}`);
+        
         if (returnUrlParam && isAllowedDomain(returnUrlParam)) {
           console.log(`Community Signup Redirect Handler: Found return_url parameter: ${returnUrlParam}`);
-          
           // Only redirect if user has completed registration
-          if (!hasCompletedRegistration(currentUser)) {
+          console.log('Community Signup Redirect Handler: Checking if user has completed registration...');
+          const registrationComplete = hasCompletedRegistration(currentUser);
+          console.log(`Community Signup Redirect Handler: Registration complete: ${registrationComplete}`);
+          if (!registrationComplete) {
             console.log('Community Signup Redirect Handler: User has not completed registration yet, waiting...');
             return;
           }
@@ -416,6 +420,8 @@ export default {
 
         // PRIORITY 2: Check for oauth2_redirect parameter (from direct signup flow)
         const oauth2RedirectParam = urlParams.get('oauth2_redirect');
+        
+        console.log(`Community Signup Redirect Handler: Checking oauth2_redirect parameter: ${oauth2RedirectParam}`);
         
         if (oauth2RedirectParam && isAllowedDomain(oauth2RedirectParam)) {
           console.log(`Community Signup Redirect Handler: Found oauth2_redirect parameter: ${oauth2RedirectParam}`);
@@ -443,6 +449,8 @@ export default {
         // PRIORITY 3: Check for origin parameter (from direct signup flow)
         const originParam = urlParams.get('origin');
         
+        console.log(`Community Signup Redirect Handler: Checking origin parameter: ${originParam}`);
+        
         if (originParam && isAllowedDomain(originParam)) {
           console.log(`Community Signup Redirect Handler: Found origin parameter: ${originParam}`);
           
@@ -468,6 +476,8 @@ export default {
 
         // PRIORITY 4: Check for original_redirect URL parameter (from OAuth2 flow)
         const originalRedirectParam = urlParams.get('original_redirect');
+        
+        console.log(`Community Signup Redirect Handler: Checking original_redirect parameter: ${originalRedirectParam}`);
         
         if (originalRedirectParam && isAllowedDomain(originalRedirectParam)) {
           console.log(`OAuth2 Redirect Handler: Found original_redirect parameter: ${originalRedirectParam}`);
@@ -495,6 +505,8 @@ export default {
 
         // PRIORITY 4.5: Check for saml_redirect parameter (from updated Auth0 action)
         const samlRedirectParam = urlParams.get('saml_redirect');
+        
+        console.log(`Community Signup Redirect Handler: Checking saml_redirect parameter: ${samlRedirectParam}`);
         
         if (samlRedirectParam && isAllowedDomain(samlRedirectParam)) {
           console.log(`OAuth2 Redirect Handler: Found saml_redirect parameter: ${samlRedirectParam}`);
