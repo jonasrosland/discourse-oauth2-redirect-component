@@ -323,152 +323,100 @@ export default {
         console.log('Community Signup Redirect Handler: Subheader content prepared');
       }
 
-      // Direct insertion method for signup pages
-      function insertSubheaderDirectly() {
-        console.log('Community Signup Redirect Handler: Attempting direct subheader insertion');
-        
-        // Check if we're on a signup page
-        const pathnameCheck = window.location.pathname.includes('/signup') || window.location.pathname.includes('/register');
-        const formCheck = document.querySelector('.signup-form, .registration-form, .create-account-form');
-        const isSignupPage = pathnameCheck || formCheck;
-        
-        if (!isSignupPage) {
-          console.log('Community Signup Redirect Handler: Not on signup page, skipping direct insertion');
-          return;
-        }
-
-        // Check if subheader is enabled
-        try {
-          if (typeof settings !== 'undefined' && settings.signup_subheader_enabled === false) {
-            console.log('Community Signup Redirect Handler: Subheader disabled in settings');
-            return;
+      // --- MutationObserver-based insertion for signup modal ---
+      function observeAndInsertSubheader() {
+        // Helper to create the subheader element
+        function createSubheaderElement() {
+          function getSetting(key, defaultValue) {
+            try {
+              if (typeof settings !== 'undefined' && settings[key] !== undefined) {
+                return settings[key];
+              }
+            } catch (e) {}
+            return defaultValue;
           }
-        } catch (e) {
-          // Proceed anyway if we can't check settings
-        }
-
-        // Check if subheader already exists
-        if (document.querySelector('.signup-value-proposition')) {
-          console.log('Community Signup Redirect Handler: Subheader already exists, skipping');
-          return;
-        }
-
-        // Get settings with fallbacks
-        function getSetting(key, defaultValue) {
-          try {
-            if (typeof settings !== 'undefined' && settings[key] !== undefined) {
-              return settings[key];
-            }
-          } catch (e) {
-            console.log(`Community Signup Redirect Handler: Could not access setting ${key}, using default`);
-          }
-          return defaultValue;
-        }
-
-        // Get all the settings
-        const title = getSetting('signup_subheader_title', 'Join the VAST Data Community');
-        const cta = getSetting('signup_subheader_cta', 'Create your account to unlock these benefits and start your VAST Data journey!');
-        
-        const benefit1Icon = getSetting('benefit_1_icon', '🎓');
-        const benefit1Title = getSetting('benefit_1_title', 'Access Mindtickle Learning Platform');
-        const benefit1Desc = getSetting('benefit_1_description', 'Get exclusive access to VAST Data training, certifications, and learning paths');
-        
-        const benefit2Icon = getSetting('benefit_2_icon', '🔬');
-        const benefit2Title = getSetting('benefit_2_title', 'Explore VAST Data Labs');
-        const benefit2Desc = getSetting('benefit_2_description', 'Hands-on labs and tutorials to master VAST Data technologies');
-        
-        const benefit3Icon = getSetting('benefit_3_icon', '👥');
-        const benefit3Title = getSetting('benefit_3_title', 'Connect with Experts');
-        const benefit3Desc = getSetting('benefit_3_description', 'Join discussions with VAST Data engineers, architects, and community members');
-        
-        const benefit4Icon = getSetting('benefit_4_icon', '📚');
-        const benefit4Title = getSetting('benefit_4_title', 'Access Resources');
-        const benefit4Desc = getSetting('benefit_4_description', 'Documentation, best practices, and troubleshooting guides');
-
-        // Create the subheader element
-        const subheaderElement = $(`
-          <div class="signup-value-proposition">
-            <div class="value-proposition-content">
-              <h3 class="value-proposition-title">${title}</h3>
-              <div class="value-proposition-benefits">
-                <div class="benefit-item">
-                  <div class="benefit-icon">${benefit1Icon}</div>
-                  <div class="benefit-text">
-                    <strong>${benefit1Title}</strong>
-                    <span>${benefit1Desc}</span>
+          const title = getSetting('signup_subheader_title', 'Join the VAST Data Community');
+          const cta = getSetting('signup_subheader_cta', 'Create your account to unlock these benefits and start your VAST Data journey!');
+          const benefit1Icon = getSetting('benefit_1_icon', '🎓');
+          const benefit1Title = getSetting('benefit_1_title', 'Access Mindtickle Learning Platform');
+          const benefit1Desc = getSetting('benefit_1_description', 'Get exclusive access to VAST Data training, certifications, and learning paths');
+          const benefit2Icon = getSetting('benefit_2_icon', '🔬');
+          const benefit2Title = getSetting('benefit_2_title', 'Explore VAST Data Labs');
+          const benefit2Desc = getSetting('benefit_2_description', 'Hands-on labs and tutorials to master VAST Data technologies');
+          const benefit3Icon = getSetting('benefit_3_icon', '👥');
+          const benefit3Title = getSetting('benefit_3_title', 'Connect with Experts');
+          const benefit3Desc = getSetting('benefit_3_description', 'Join discussions with VAST Data engineers, architects, and community members');
+          const benefit4Icon = getSetting('benefit_4_icon', '📚');
+          const benefit4Title = getSetting('benefit_4_title', 'Access Resources');
+          const benefit4Desc = getSetting('benefit_4_description', 'Documentation, best practices, and troubleshooting guides');
+          return $(`
+            <div class="signup-value-proposition">
+              <div class="value-proposition-content">
+                <h3 class="value-proposition-title">${title}</h3>
+                <div class="value-proposition-benefits">
+                  <div class="benefit-item">
+                    <div class="benefit-icon">${benefit1Icon}</div>
+                    <div class="benefit-text">
+                      <strong>${benefit1Title}</strong>
+                      <span>${benefit1Desc}</span>
+                    </div>
+                  </div>
+                  <div class="benefit-item">
+                    <div class="benefit-icon">${benefit2Icon}</div>
+                    <div class="benefit-text">
+                      <strong>${benefit2Title}</strong>
+                      <span>${benefit2Desc}</span>
+                    </div>
+                  </div>
+                  <div class="benefit-item">
+                    <div class="benefit-icon">${benefit3Icon}</div>
+                    <div class="benefit-text">
+                      <strong>${benefit3Title}</strong>
+                      <span>${benefit3Desc}</span>
+                    </div>
+                  </div>
+                  <div class="benefit-item">
+                    <div class="benefit-icon">${benefit4Icon}</div>
+                    <div class="benefit-text">
+                      <strong>${benefit4Title}</strong>
+                      <span>${benefit4Desc}</span>
+                    </div>
                   </div>
                 </div>
-                <div class="benefit-item">
-                  <div class="benefit-icon">${benefit2Icon}</div>
-                  <div class="benefit-text">
-                    <strong>${benefit2Title}</strong>
-                    <span>${benefit2Desc}</span>
-                  </div>
+                <div class="value-proposition-cta">
+                  <p>${cta}</p>
                 </div>
-                <div class="benefit-item">
-                  <div class="benefit-icon">${benefit3Icon}</div>
-                  <div class="benefit-text">
-                    <strong>${benefit3Title}</strong>
-                    <span>${benefit3Desc}</span>
-                  </div>
-                </div>
-                <div class="benefit-item">
-                  <div class="benefit-icon">${benefit4Icon}</div>
-                  <div class="benefit-text">
-                    <strong>${benefit4Title}</strong>
-                    <span>${benefit4Desc}</span>
-                  </div>
-                </div>
-              </div>
-              <div class="value-proposition-cta">
-                <p>${cta}</p>
               </div>
             </div>
-          </div>
-        `);
+          `);
+        }
 
-        // Try multiple insertion targets for Discourse signup modal
-        let inserted = false;
-        
-        // Target 1: Discourse modal title
-        const modalTitle = document.querySelector('.modal-inner h1, .d-modal h1, .modal h1, .signup-modal h1, .modal-title');
-        if (modalTitle && !inserted) {
-          $(modalTitle).after(subheaderElement.clone());
-          inserted = true;
-          console.log('Community Signup Redirect Handler: Subheader inserted after modal title');
-        }
-        
-        // Target 2: Discourse modal body
-        const modalBody = document.querySelector('.modal-inner .modal-body, .d-modal .modal-body, .modal .modal-body, .modal-body');
-        if (modalBody && !inserted) {
-          $(modalBody).prepend(subheaderElement.clone());
-          inserted = true;
-          console.log('Community Signup Redirect Handler: Subheader inserted in modal body');
-        }
-        
-        // Target 3: Discourse modal content
-        const modalContent = document.querySelector('.modal-inner, .d-modal, .modal, .signup-modal');
-        if (modalContent && !inserted) {
-          $(modalContent).prepend(subheaderElement.clone());
-          inserted = true;
-          console.log('Community Signup Redirect Handler: Subheader inserted in modal content');
-        }
-        
-        // Target 4: Main content area
-        const mainContent = document.querySelector('main, .main-content, .content, #main');
-        if (mainContent && !inserted) {
-          $(mainContent).prepend(subheaderElement.clone());
-          inserted = true;
-          console.log('Community Signup Redirect Handler: Subheader inserted in main content');
-        }
-        
-        // Target 5: Body as last resort
-        if (!inserted) {
-          $('body').prepend(subheaderElement.clone());
-          console.log('Community Signup Redirect Handler: Subheader inserted in body (fallback)');
-        }
-        
-        console.log('Community Signup Redirect Handler: Direct subheader insertion completed');
+        // Only observe if on signup page
+        const isSignupPage = window.location.pathname.includes('/signup') || window.location.pathname.includes('/register');
+        if (!isSignupPage) return;
+
+        // Prevent duplicate observers
+        if (window.__vast_signup_subheader_observer) return;
+
+        const observer = new MutationObserver(() => {
+          // Try to find the modal title or modal body
+          const modalTitle = document.querySelector('.modal-inner h1, .d-modal h1, .modal h1, .signup-modal h1, .modal-title');
+          const modalBody = document.querySelector('.modal-inner .modal-body, .d-modal .modal-body, .modal .modal-body, .modal-body');
+          // Only insert if not already present
+          if (document.querySelector('.signup-value-proposition')) return;
+          const subheader = createSubheaderElement();
+          if (modalTitle) {
+            $(modalTitle).after(subheader);
+            console.log('Community Signup Redirect Handler: Subheader inserted after modal title (observer)');
+            observer.disconnect();
+          } else if (modalBody) {
+            $(modalBody).prepend(subheader);
+            console.log('Community Signup Redirect Handler: Subheader inserted in modal body (observer)');
+            observer.disconnect();
+          }
+        });
+        observer.observe(document.body, { childList: true, subtree: true });
+        window.__vast_signup_subheader_observer = observer;
       }
 
       // Create countdown CTA element
@@ -1039,10 +987,10 @@ export default {
       // Add signup subheader styles on page load
       setTimeout(addSignupSubheader, 1000);
       
-      // Try direct insertion with delays to ensure modal is loaded
-      setTimeout(insertSubheaderDirectly, 2000);
-      setTimeout(insertSubheaderDirectly, 5000);
-      setTimeout(insertSubheaderDirectly, 10000);
+      // Use observer for modal
+      setTimeout(observeAndInsertSubheader, 500);
+      setTimeout(observeAndInsertSubheader, 2000);
+      setTimeout(observeAndInsertSubheader, 5000);
       
       // Add test function to global scope for debugging
       window.testRedirectCTA = function() {
@@ -1053,7 +1001,7 @@ export default {
       // Add test function for subheader
       window.testSubheader = function() {
         console.log('Community Signup Redirect Handler: Testing subheader manually');
-        insertSubheaderDirectly();
+        observeAndInsertSubheader();
       };
       
       // Add test function that forces subheader to be visible
