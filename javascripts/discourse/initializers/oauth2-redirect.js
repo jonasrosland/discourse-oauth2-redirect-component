@@ -75,7 +75,10 @@ export default {
 
       // Check if user has completed registration (has username and is not on signup page)
       function hasCompletedRegistration(currentUser) {
-        if (!currentUser) return false;
+        if (!currentUser) {
+          console.log('Community Signup Redirect Handler: No current user available - registration status unknown');
+          return false;
+        }
         
         // User must have a username
         if (!currentUser.username) {
@@ -91,9 +94,20 @@ export default {
         
         // For direct signup flow, we can be more lenient with timing since registration is manual
         // Check if user has been active for at least 5 minutes (reduced from 15 minutes)
+        if (!currentUser.created_at) {
+          console.log('Community Signup Redirect Handler: User has no created_at timestamp - cannot determine registration time');
+          return false;
+        }
+        
         const userCreatedTime = new Date(currentUser.created_at).getTime();
         const currentTime = new Date().getTime();
         const timeSinceCreation = currentTime - userCreatedTime;
+        
+        // Check if the timestamp is valid (not NaN)
+        if (isNaN(timeSinceCreation)) {
+          console.log('Community Signup Redirect Handler: Invalid created_at timestamp - cannot determine registration time');
+          return false;
+        }
         
         if (timeSinceCreation < 300000) { // 5 minutes
           console.log(`Community Signup Redirect Handler: User created recently (${timeSinceCreation}ms ago) - waiting for registration completion`);
@@ -152,12 +166,22 @@ export default {
         const currentUser = api.getCurrentUser();
         if (!currentUser) {
           console.log('Community Signup Redirect Handler: No current user found, skipping redirect');
+          console.log('Community Signup Redirect Handler: This is normal if user is not logged in or user data is still loading');
           return;
         }
 
-        console.log(`Community Signup Redirect Handler: User logged in: ${currentUser.email}`);
-        console.log(`Community Signup Redirect Handler: User created at: ${currentUser.created_at}`);
+        console.log(`Community Signup Redirect Handler: User logged in: ${currentUser.email || 'No email'}`);
+        console.log(`Community Signup Redirect Handler: User created at: ${currentUser.created_at || 'No timestamp'}`);
+        console.log(`Community Signup Redirect Handler: User username: ${currentUser.username || 'No username'}`);
+        console.log(`Community Signup Redirect Handler: User name: ${currentUser.name || 'No name'}`);
         console.log(`Community Signup Redirect Handler: Current URL: ${window.location.href}`);
+
+        // Validate that we have complete user data before proceeding
+        if (!currentUser.username || !currentUser.created_at || !currentUser.email) {
+          console.log('Community Signup Redirect Handler: Incomplete user data - waiting for full user profile to load');
+          console.log(`Community Signup Redirect Handler: username: ${!!currentUser.username}, created_at: ${!!currentUser.created_at}, email: ${!!currentUser.email}`);
+          return;
+        }
 
         // PRIORITY 1: Check for return_url parameter (from direct signup flow)
         const urlParams = new URLSearchParams(window.location.search);
@@ -354,6 +378,19 @@ export default {
         // Wait after registration to ensure completion
         setTimeout(handleRedirect, 120000); // 2 minutes
       });
+
+      // Listen for user profile updates to ensure we have complete data
+      api.onAppEvent('user:updated', () => {
+        console.log('Community Signup Redirect Handler: User updated event detected');
+        // Wait a bit for the update to complete
+        setTimeout(handleRedirect, 30000); // 30 seconds
+      });
+
+      // Additional check after a longer delay to ensure user data is fully loaded
+      setTimeout(() => {
+        console.log('Community Signup Redirect Handler: Running delayed user data check');
+        handleRedirect();
+      }, 180000); // 3 minutes
 
       // Store redirect URL when user is redirected to Discourse
       // This is a backup mechanism in case the Auth0 Action doesn't work
