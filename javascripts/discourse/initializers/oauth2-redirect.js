@@ -80,6 +80,8 @@ export default {
 
       // Create countdown CTA element
       function createCountdownCTA(redirectUrl, destinationName) {
+        console.log(`Community Signup Redirect Handler: Creating countdown CTA for ${destinationName} (${redirectUrl})`);
+        
         // Remove any existing CTA
         const existingCTA = document.getElementById('redirect-countdown-cta');
         if (existingCTA) {
@@ -235,6 +237,7 @@ export default {
 
         // Add to page and start countdown
         document.body.appendChild(ctaContainer);
+        console.log(`Community Signup Redirect Handler: CTA added to page, starting countdown`);
         updateCountdown();
       }
 
@@ -318,8 +321,10 @@ export default {
 
       // Main redirect handler function
       function handleRedirect() {
+        console.log('Community Signup Redirect Handler: === REDIRECT CHECK STARTED ===');
         console.log('Community Signup Redirect Handler: Checking for redirect conditions...');
         console.log('Community Signup Redirect Handler: Current URL parameters:', Object.fromEntries(new URLSearchParams(window.location.search)));
+        console.log('Community Signup Redirect Handler: Current URL:', window.location.href);
         
         // PRIORITY 0: Check if we're currently on a signup/registration page - NEVER redirect from these pages
         const currentPath = window.location.pathname;
@@ -342,6 +347,13 @@ export default {
         
         // Check if user is logged in
         const currentUser = api.getCurrentUser();
+        console.log('Community Signup Redirect Handler: Current user:', currentUser ? {
+          username: currentUser.username,
+          email: currentUser.email,
+          name: currentUser.name,
+          created_at: currentUser.created_at
+        } : 'No user');
+        
         if (!currentUser) {
           console.log('Community Signup Redirect Handler: No current user found, skipping redirect');
           console.log('Community Signup Redirect Handler: This is normal if user is not logged in or user data is still loading');
@@ -551,24 +563,24 @@ export default {
       // Run redirect check with appropriate delays for direct signup flow
       api.onPageChange(() => {
         // Reasonable delay to ensure user has time to complete registration
-        setTimeout(handleRedirect, 60000); // 1 minute
+        setTimeout(handleRedirect, 10000); // 10 seconds for testing
       });
 
       // Also run on initial load with reasonable delay
-      setTimeout(handleRedirect, 120000); // 2 minutes
+      setTimeout(handleRedirect, 15000); // 15 seconds for testing
 
       // Listen for user login events
       api.onAppEvent('user:logged-in', () => {
         console.log('Community Signup Redirect Handler: User logged in event detected');
         // Don't redirect immediately on login - wait for registration completion
-        setTimeout(handleRedirect, 60000); // 1 minute
+        setTimeout(handleRedirect, 10000); // 10 seconds for testing
       });
 
       // Listen for user registration events
       api.onAppEvent('user:registered', () => {
         console.log('Community Signup Redirect Handler: User registered event detected');
         // Wait after registration to ensure completion
-        setTimeout(handleRedirect, 120000); // 2 minutes
+        setTimeout(handleRedirect, 15000); // 15 seconds for testing
       });
 
       // Listen for user profile updates to ensure we have complete data
@@ -610,6 +622,14 @@ export default {
       }
 
       console.log('Community Signup Redirect Handler: Initialization complete');
+      
+      // Add test function to global scope for debugging
+      window.testRedirectCTA = function() {
+        console.log('Community Signup Redirect Handler: Testing CTA manually');
+        createCountdownCTA('https://vastdatacustomers.mindtickle.com', 'Mindtickle');
+      };
+      
+      console.log('Community Signup Redirect Handler: Test function available: window.testRedirectCTA()');
     });
   }
 }; 
