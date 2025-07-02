@@ -60,6 +60,184 @@ export default {
         }
       }
 
+      // Get destination site name from URL
+      function getDestinationSiteName(url) {
+        try {
+          const urlObj = new URL(url);
+          if (urlObj.hostname.includes('mindtickle.com')) {
+            return 'Mindtickle';
+          } else if (urlObj.hostname.includes('vastdata.com')) {
+            return 'Vast Data Labs';
+          } else if (urlObj.hostname.includes('auth0.com')) {
+            return 'Mindtickle'; // Auth0 SAML callback goes to Mindtickle
+          } else {
+            return 'your original site';
+          }
+        } catch (e) {
+          return 'your original site';
+        }
+      }
+
+      // Create countdown CTA element
+      function createCountdownCTA(redirectUrl, destinationName) {
+        // Remove any existing CTA
+        const existingCTA = document.getElementById('redirect-countdown-cta');
+        if (existingCTA) {
+          existingCTA.remove();
+        }
+
+        const ctaContainer = document.createElement('div');
+        ctaContainer.id = 'redirect-countdown-cta';
+        ctaContainer.style.cssText = `
+          position: fixed;
+          top: 20px;
+          right: 20px;
+          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          color: white;
+          padding: 20px;
+          border-radius: 12px;
+          box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+          z-index: 9999;
+          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+          max-width: 350px;
+          backdrop-filter: blur(10px);
+          border: 1px solid rgba(255, 255, 255, 0.2);
+          animation: slideIn 0.5s ease-out;
+        `;
+
+        let countdown = 10;
+        const countdownElement = document.createElement('div');
+        countdownElement.style.cssText = `
+          font-size: 24px;
+          font-weight: bold;
+          margin-bottom: 10px;
+          text-align: center;
+        `;
+
+        const messageElement = document.createElement('div');
+        messageElement.style.cssText = `
+          font-size: 14px;
+          margin-bottom: 15px;
+          line-height: 1.4;
+          text-align: center;
+        `;
+
+        const buttonContainer = document.createElement('div');
+        buttonContainer.style.cssText = `
+          display: flex;
+          gap: 10px;
+          justify-content: center;
+        `;
+
+        const cancelButton = document.createElement('button');
+        cancelButton.textContent = 'Stay Here';
+        cancelButton.style.cssText = `
+          background: rgba(255, 255, 255, 0.2);
+          border: 1px solid rgba(255, 255, 255, 0.3);
+          color: white;
+          padding: 8px 16px;
+          border-radius: 6px;
+          cursor: pointer;
+          font-size: 12px;
+          transition: all 0.2s ease;
+        `;
+
+        const goNowButton = document.createElement('button');
+        goNowButton.textContent = 'Go Now';
+        goNowButton.style.cssText = `
+          background: rgba(255, 255, 255, 0.9);
+          border: none;
+          color: #667eea;
+          padding: 8px 16px;
+          border-radius: 6px;
+          cursor: pointer;
+          font-size: 12px;
+          font-weight: bold;
+          transition: all 0.2s ease;
+        `;
+
+        // Add hover effects
+        cancelButton.addEventListener('mouseenter', () => {
+          cancelButton.style.background = 'rgba(255, 255, 255, 0.3)';
+        });
+        cancelButton.addEventListener('mouseleave', () => {
+          cancelButton.style.background = 'rgba(255, 255, 255, 0.2)';
+        });
+
+        goNowButton.addEventListener('mouseenter', () => {
+          goNowButton.style.background = 'white';
+          goNowButton.style.transform = 'translateY(-1px)';
+        });
+        goNowButton.addEventListener('mouseleave', () => {
+          goNowButton.style.background = 'rgba(255, 255, 255, 0.9)';
+          goNowButton.style.transform = 'translateY(0)';
+        });
+
+        // Cancel button functionality
+        cancelButton.addEventListener('click', () => {
+          console.log('Community Signup Redirect Handler: User cancelled redirect');
+          ctaContainer.remove();
+          // Clear the redirect URL from localStorage to prevent future redirects
+          localStorage.removeItem('auth0_original_redirect_url');
+          // Clear URL parameters
+          const newUrl = new URL(window.location.href);
+          newUrl.searchParams.delete('return_url');
+          newUrl.searchParams.delete('oauth2_redirect');
+          newUrl.searchParams.delete('origin');
+          newUrl.searchParams.delete('saml_redirect');
+          newUrl.searchParams.delete('original_redirect');
+          window.history.replaceState({}, '', newUrl.toString());
+        });
+
+        // Go now button functionality
+        goNowButton.addEventListener('click', () => {
+          console.log(`Community Signup Redirect Handler: User clicked "Go Now" - redirecting to ${redirectUrl}`);
+          window.location.href = redirectUrl;
+        });
+
+        // Update countdown
+        function updateCountdown() {
+          countdownElement.textContent = `${countdown}s`;
+          messageElement.textContent = `Redirecting you back to ${destinationName} in ${countdown} seconds...`;
+          
+          if (countdown <= 0) {
+            console.log(`Community Signup Redirect Handler: Countdown finished - redirecting to ${redirectUrl}`);
+            window.location.href = redirectUrl;
+            return;
+          }
+          
+          countdown--;
+          setTimeout(updateCountdown, 1000);
+        }
+
+        // Assemble the CTA
+        ctaContainer.appendChild(countdownElement);
+        ctaContainer.appendChild(messageElement);
+        buttonContainer.appendChild(cancelButton);
+        buttonContainer.appendChild(goNowButton);
+        ctaContainer.appendChild(buttonContainer);
+
+        // Add CSS animation
+        const style = document.createElement('style');
+        style.textContent = `
+          @keyframes slideIn {
+            from {
+              transform: translateX(100%);
+              opacity: 0;
+            }
+            to {
+              transform: translateX(0);
+              opacity: 1;
+            }
+          }
+        `;
+        document.head.appendChild(style);
+
+        // Add to page and start countdown
+        document.body.appendChild(ctaContainer);
+        updateCountdown();
+      }
+
       // Check if user is currently on a registration/signup page
       function isOnRegistrationPage() {
         const pathname = window.location.pathname;
@@ -183,6 +361,12 @@ export default {
           return;
         }
 
+        // Check if countdown CTA is already showing
+        if (document.getElementById('redirect-countdown-cta')) {
+          console.log('Community Signup Redirect Handler: Countdown CTA already showing, skipping');
+          return;
+        }
+
         // PRIORITY 1: Check for return_url parameter (from direct signup flow)
         const urlParams = new URLSearchParams(window.location.search);
         const returnUrlParam = urlParams.get('return_url');
@@ -203,9 +387,10 @@ export default {
           newUrl.searchParams.delete('origin');
           window.history.replaceState({}, '', newUrl.toString());
           
-          // Redirect to the original site
-          console.log(`Community Signup Redirect Handler: Redirecting to original site: ${returnUrlParam}`);
-          window.location.href = returnUrlParam;
+          // Show countdown CTA instead of immediate redirect
+          const destinationName = getDestinationSiteName(returnUrlParam);
+          console.log(`Community Signup Redirect Handler: Showing countdown CTA for ${destinationName}`);
+          createCountdownCTA(returnUrlParam, destinationName);
           return;
         }
 
@@ -228,9 +413,10 @@ export default {
           newUrl.searchParams.delete('origin');
           window.history.replaceState({}, '', newUrl.toString());
           
-          // Redirect to the original site
-          console.log(`Community Signup Redirect Handler: Redirecting to original site: ${oauth2RedirectParam}`);
-          window.location.href = oauth2RedirectParam;
+          // Show countdown CTA instead of immediate redirect
+          const destinationName = getDestinationSiteName(oauth2RedirectParam);
+          console.log(`Community Signup Redirect Handler: Showing countdown CTA for ${destinationName}`);
+          createCountdownCTA(oauth2RedirectParam, destinationName);
           return;
         }
 
@@ -253,9 +439,10 @@ export default {
           newUrl.searchParams.delete('origin');
           window.history.replaceState({}, '', newUrl.toString());
           
-          // Redirect to the original site
-          console.log(`Community Signup Redirect Handler: Redirecting to original site: ${originParam}`);
-          window.location.href = originParam;
+          // Show countdown CTA instead of immediate redirect
+          const destinationName = getDestinationSiteName(originParam);
+          console.log(`Community Signup Redirect Handler: Showing countdown CTA for ${destinationName}`);
+          createCountdownCTA(originParam, destinationName);
           return;
         }
 
@@ -279,9 +466,10 @@ export default {
           newUrl.searchParams.delete('redirect_count');
           window.history.replaceState({}, '', newUrl.toString());
           
-          // Redirect to the original site
-          console.log(`OAuth2 Redirect Handler: User registration complete, redirecting to original site: ${originalRedirectParam}`);
-          window.location.href = originalRedirectParam;
+          // Show countdown CTA instead of immediate redirect
+          const destinationName = getDestinationSiteName(originalRedirectParam);
+          console.log(`OAuth2 Redirect Handler: User registration complete, showing countdown CTA for ${destinationName}`);
+          createCountdownCTA(originalRedirectParam, destinationName);
           return;
         }
 
@@ -304,9 +492,10 @@ export default {
           newUrl.searchParams.delete('redirect_count');
           window.history.replaceState({}, '', newUrl.toString());
           
-          // Redirect to the original site
-          console.log(`OAuth2 Redirect Handler: User registration complete, redirecting to SAML callback: ${samlRedirectParam}`);
-          window.location.href = samlRedirectParam;
+          // Show countdown CTA instead of immediate redirect
+          const destinationName = getDestinationSiteName(samlRedirectParam);
+          console.log(`OAuth2 Redirect Handler: User registration complete, showing countdown CTA for ${destinationName}`);
+          createCountdownCTA(samlRedirectParam, destinationName);
           return;
         }
 
@@ -324,9 +513,10 @@ export default {
           // Clear the stored URL
           localStorage.removeItem('auth0_original_redirect_url');
           
-          // Redirect to the original site
-          console.log(`OAuth2 Redirect Handler: Redirecting to original site: ${storedRedirectUrl}`);
-          window.location.href = storedRedirectUrl;
+          // Show countdown CTA instead of immediate redirect
+          const destinationName = getDestinationSiteName(storedRedirectUrl);
+          console.log(`OAuth2 Redirect Handler: Showing countdown CTA for ${destinationName}`);
+          createCountdownCTA(storedRedirectUrl, destinationName);
           return;
         }
 
@@ -347,8 +537,10 @@ export default {
             const fallbackRedirectUrl = 'https://thecosmosai-community.us.auth0.com/samlp/Mf20autdp5U8lXI7FUh0ciD2Z2Xj0d7d';
             console.log(`OAuth2 Redirect Handler: Using Auth0 SAML callback URL as fallback: ${fallbackRedirectUrl}`);
             
-            // Redirect to the fallback URL
-            window.location.href = fallbackRedirectUrl;
+            // Show countdown CTA instead of immediate redirect
+            const destinationName = getDestinationSiteName(fallbackRedirectUrl);
+            console.log(`OAuth2 Redirect Handler: Showing countdown CTA for ${destinationName}`);
+            createCountdownCTA(fallbackRedirectUrl, destinationName);
             return;
           }
         }
