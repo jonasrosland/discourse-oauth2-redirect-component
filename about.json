@@ -7,5 +7,8 @@
   "minimum_discourse_version": "2.7.0",
   "license_url": "https://github.com/your-repo/oauth2-redirect-theme-component/blob/main/LICENSE",
   "about_url": "https://github.com/your-repo/oauth2-redirect-theme-component",
-  "component": true
+  "component": true,
+  "outlets": {
+    "create-account-header-bottom": "signup-subheader"
+  }
 }
