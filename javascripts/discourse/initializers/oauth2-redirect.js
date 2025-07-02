@@ -22,11 +22,12 @@ export default {
           console.log('Error accessing settings.whitelisted_domains:', e);
         }
         
-        // Default allowed domains
+        // Default allowed domains - updated to include Auth0 SAML callback URL
         return [
           'vastdatacustomers.mindtickle.com',
           'mindtickle.com',
-          'vastdata.com'
+          'vastdata.com',
+          'thecosmosai-community.us.auth0.com' // Auth0 SAML callback domain
         ];
       }
 
@@ -126,6 +127,7 @@ export default {
       // Main redirect handler function
       function handleRedirect() {
         console.log('Community Signup Redirect Handler: Checking for redirect conditions...');
+        console.log('Community Signup Redirect Handler: Current URL parameters:', Object.fromEntries(new URLSearchParams(window.location.search)));
         
         // PRIORITY 0: Check if we're currently on a signup/registration page - NEVER redirect from these pages
         const currentPath = window.location.pathname;
@@ -259,6 +261,31 @@ export default {
           return;
         }
 
+        // PRIORITY 4.5: Check for saml_redirect parameter (from updated Auth0 action)
+        const samlRedirectParam = urlParams.get('saml_redirect');
+        
+        if (samlRedirectParam && isAllowedDomain(samlRedirectParam)) {
+          console.log(`OAuth2 Redirect Handler: Found saml_redirect parameter: ${samlRedirectParam}`);
+          
+          // Check if user has completed registration
+          if (!hasCompletedRegistration(currentUser)) {
+            console.log('OAuth2 Redirect Handler: User has not completed registration yet, waiting...');
+            return;
+          }
+          
+          // Clear the parameter from URL to prevent loops
+          const newUrl = new URL(window.location.href);
+          newUrl.searchParams.delete('saml_redirect');
+          newUrl.searchParams.delete('original_redirect');
+          newUrl.searchParams.delete('redirect_count');
+          window.history.replaceState({}, '', newUrl.toString());
+          
+          // Redirect to the original site
+          console.log(`OAuth2 Redirect Handler: User registration complete, redirecting to SAML callback: ${samlRedirectParam}`);
+          window.location.href = samlRedirectParam;
+          return;
+        }
+
         // PRIORITY 5: Check if we have a stored redirect URL in localStorage (fallback method)
         const storedRedirectUrl = localStorage.getItem('auth0_original_redirect_url');
         if (storedRedirectUrl && isAllowedDomain(storedRedirectUrl)) {
@@ -292,8 +319,9 @@ export default {
             console.log(`OAuth2 Redirect Handler: Time since registration: ${timeSinceRegistration}ms`);
             
             // Check if we have any stored redirect information
-            const fallbackRedirectUrl = 'https://vastdatacustomers.mindtickle.com';
-            console.log(`OAuth2 Redirect Handler: Using fallback redirect URL: ${fallbackRedirectUrl}`);
+            // Prioritize Auth0 SAML callback URL for Mindtickle users
+            const fallbackRedirectUrl = 'https://thecosmosai-community.us.auth0.com/samlp/Mf20autdp5U8lXI7FUh0ciD2Z2Xj0d7d';
+            console.log(`OAuth2 Redirect Handler: Using Auth0 SAML callback URL as fallback: ${fallbackRedirectUrl}`);
             
             // Redirect to the fallback URL
             window.location.href = fallbackRedirectUrl;
@@ -337,16 +365,19 @@ export default {
       
       // Check if this is a signup flow or OAuth callback with redirect information
       // Updated to prioritize return_url parameter (from direct signup) and original_redirect parameter (from Action)
+      // Also includes saml_redirect parameter from updated Auth0 action
       const originalUrl = urlParams.get('return_url') ||
                          urlParams.get('original_redirect') ||
+                         urlParams.get('saml_redirect') ||
                          urlParams.get('original_url') || 
-                         urlParams.get('saml_redirect') || 
                          urlParams.get('return_to') ||
                          urlParams.get('returnTo');
       
       if (originalUrl && isAllowedDomain(originalUrl)) {
         console.log(`Community Signup Redirect Handler: Storing original redirect URL: ${originalUrl}`);
         localStorage.setItem('auth0_original_redirect_url', originalUrl);
+      } else if (originalUrl) {
+        console.log(`Community Signup Redirect Handler: Found redirect URL but domain not allowed: ${originalUrl}`);
       }
 
       console.log('Community Signup Redirect Handler: Initialization complete');
